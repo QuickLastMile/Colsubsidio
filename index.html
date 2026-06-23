@@ -543,7 +543,8 @@ function initGIS(){
   if(!window.google||!google.accounts)return;
   BQ_TOKEN_CLIENT=google.accounts.oauth2.initTokenClient({
     client_id:BQ_CLIENT_ID,
-    scope:'https://www.googleapis.com/auth/bigquery.readonly',
+    // Scope completo: 'bigquery.readonly' NO permite ejecutar consultas (crear jobs)
+    scope:'https://www.googleapis.com/auth/bigquery',
     callback:(resp)=>{
       if(resp.error){if(BQ_TOKEN_REJECT)BQ_TOKEN_REJECT(new Error(resp.error));return;}
       BQ_TOKEN=resp.access_token;
@@ -659,6 +660,7 @@ let ST={nc:true,cross:true,ciudad:'',tipo:'',nov:'',esp:new Set(),fechaInicio:''
 
 // Render progresivo: evita que el navegador se quede congelado dibujando todas las pestañas a la vez.
 let UPD_SEQ=0, LAST_DATA=[], RENDER_QUEUE_BUSY=false, LAST_STAGE_AT=Date.now(), WATCHDOG=null;
+let LAST_BQ_ERROR=''; // último error de BigQuery para mostrarlo en pantalla
 const TAB_ORDER=['general','novedades','tiempos','detalle']; // mapa queda bajo demanda porque Leaflet pesa más
 
 // ════════════════════════════════════════════════
@@ -2319,6 +2321,7 @@ async function tryFetch(tabla,label='hoja'){
     return rows;
   }catch(err){
     console.error(`Error BigQuery ${label}:`,err);
+    LAST_BQ_ERROR=`${label}: ${err.message||String(err)}`;
     setWorkStatus(`Error cargando ${label}…`,null,err.message||String(err));
     return[];
   }
@@ -2334,11 +2337,11 @@ function showError(){
   <div style="text-align:center;padding:28px 22px;font-family:'DM Sans',sans-serif;max-width:480px">
     <div style="font-size:40px;margin-bottom:10px">⚠️</div>
     <div style="font-size:16px;font-weight:700;color:white;margin-bottom:8px">No se pudieron cargar los datos</div>
-    <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:22px;line-height:1.7">
+    <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:16px;line-height:1.7">
       No se obtuvieron registros desde BigQuery.<br>
-      Verifica tu conexión y que tu cuenta tenga acceso al proyecto.<br>
-      <span style="color:rgba(255,255,255,.4)">Abre la consola (F12) para ver el detalle del error.</span>
+      Verifica tu conexión y que tu cuenta tenga acceso al proyecto.
     </div>
+    ${LAST_BQ_ERROR?`<div style="background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:10px 12px;margin-bottom:18px;font-family:'DM Mono',monospace;font-size:11px;color:#ffd1d1;text-align:left;word-break:break-word;max-height:140px;overflow:auto">${LAST_BQ_ERROR.replace(/</g,'&lt;')}</div>`:''}
     <div style="display:flex;gap:8px;justify-content:center">
       <button onclick="retryManual()" style="padding:11px 26px;background:#FFD100;color:#003f72;border:none;border-radius:9px;font-size:13px;font-weight:800;cursor:pointer;font-family:'DM Sans',sans-serif">🔄 Reintentar</button>
     </div>
