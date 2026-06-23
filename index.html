@@ -590,34 +590,62 @@ function triggerLogin(){
   else{setTimeout(()=>{initGIS();if(BQ_TOKEN_CLIENT)BQ_TOKEN_CLIENT.requestAccessToken();},300);}
 }
 
-async function bqFetchPage(sql,pageToken=null){
+const BQ_PAGE_SIZE=20000;
+
+// Inicia la consulta (jobs.query). Devuelve jobId, location y la primera página.
+async function bqStartQuery(sql){
   const token=await getBQToken();
-  const body={query:sql,useLegacySql:false,timeoutMs:120000,maxResults:50000};
-  if(pageToken)body.pageToken=pageToken;
   const resp=await fetch(`https://bigquery.googleapis.com/bigquery/v2/projects/${BQ_PROJECT}/queries`,{
     method:'POST',
     headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-    body:JSON.stringify(body)
+    body:JSON.stringify({query:sql,useLegacySql:false,timeoutMs:30000,maxResults:BQ_PAGE_SIZE})
   });
   if(!resp.ok){const e=await resp.text();throw new Error('BQ '+resp.status+': '+e.slice(0,300));}
   return resp.json();
 }
 
+// Trae páginas posteriores (jobs.getQueryResults) — GET con jobId, NO re-POST.
+async function bqGetResults(jobId,location,pageToken){
+  const token=await getBQToken();
+  let url=`https://bigquery.googleapis.com/bigquery/v2/projects/${BQ_PROJECT}/queries/${jobId}?maxResults=${BQ_PAGE_SIZE}&timeoutMs=30000`;
+  if(location)url+='&location='+encodeURIComponent(location);
+  if(pageToken)url+='&pageToken='+encodeURIComponent(pageToken);
+  const resp=await fetch(url,{headers:{'Authorization':'Bearer '+token}});
+  if(!resp.ok){const e=await resp.text();throw new Error('BQ '+resp.status+': '+e.slice(0,300));}
+  return resp.json();
+}
+
 async function queryBigQuery(sql,label=''){
-  let allRows=[],pageToken=null,fields=null,page=0;
-  do{
+  let data=await bqStartQuery(sql);
+  const jobId=data.jobReference&&data.jobReference.jobId;
+  const location=data.jobReference&&data.jobReference.location;
+
+  // Si la consulta aún no terminó, esperar con getQueryResults
+  let guard=0;
+  while(!data.jobComplete&&guard++<60){
+    if(label)setWorkStatus(`Cargando ${label}…`,null,'Ejecutando consulta en BigQuery…');
+    await new Promise(r=>setTimeout(r,1200));
+    data=await bqGetResults(jobId,location,null);
+  }
+
+  const fields=data.schema?data.schema.fields.map(f=>f.name):[];
+  const allRows=[];
+  const collect=(rows)=>{
+    if(!rows||!fields.length)return;
+    for(const row of rows){
+      const obj={};row.f.forEach((cell,i)=>{obj[fields[i]]=cell.v??'';});allRows.push(obj);
+    }
+  };
+  collect(data.rows);
+
+  let pageToken=data.pageToken||null,page=1;
+  while(pageToken){
     page++;
     if(label)setWorkStatus(`Cargando ${label}…`,null,`Página ${page} — ${allRows.length.toLocaleString('es-CO')} filas recibidas`);
-    const data=await bqFetchPage(sql,pageToken);
-    if(!fields&&data.schema)fields=data.schema.fields.map(f=>f.name);
-    if(data.rows&&fields){
-      const chunk=data.rows.map(row=>{
-        const obj={};row.f.forEach((cell,i)=>{obj[fields[i]]=cell.v??'';});return obj;
-      });
-      allRows=allRows.concat(chunk);
-    }
+    data=await bqGetResults(jobId,location,pageToken);
+    collect(data.rows);
     pageToken=data.pageToken||null;
-  }while(pageToken);
+  }
   return allRows;
 }
 

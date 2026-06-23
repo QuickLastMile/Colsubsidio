@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Cargar DATA CROSS · Colsubsidio</title>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#f1f5f9;color:#1e293b;min-height:100vh}
+header{background:#7c3aed;color:white;padding:16px 32px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+header .logo{font-size:20px;font-weight:800;letter-spacing:-.5px}
+header .sub{font-size:12px;opacity:.7;font-weight:400}
+header .badge{background:#FFD100;color:#3b0764;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;margin-left:auto}
+.container{max-width:900px;margin:32px auto;padding:0 24px}
+.card{background:white;border-radius:14px;box-shadow:0 2px 12px rgba(15,23,42,.08);padding:28px;margin-bottom:20px}
+.card h2{font-size:15px;font-weight:700;color:#7c3aed;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card h2 span{background:#f3e8ff;color:#7c3aed;width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.btn-primary{background:#7c3aed;color:white}
+.btn-primary:hover{background:#6d28d9}
+.btn-yellow{background:#FFD100;color:#3b0764}
+.btn-yellow:hover{background:#e6bc00}
+.btn-green{background:#10b981;color:white}
+.btn-ghost{background:#f1f5f9;color:#475569}
+.btn-ghost:hover{background:#e2e8f0}
+.btn-red{background:#ef4444;color:white}
+.btn-red:hover{background:#dc2626}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.drop-zone{border:2.5px dashed #cbd5e1;border-radius:12px;padding:48px 24px;text-align:center;transition:all .2s;cursor:pointer;background:#f8fafc}
+.drop-zone.hover{border-color:#7c3aed;background:#f3e8ff}
+.drop-zone.has-file{border-color:#10b981;background:#f0fdf4}
+.drop-zone .icon{font-size:40px;margin-bottom:12px}
+.drop-zone h3{font-size:15px;font-weight:700;color:#1e293b;margin-bottom:6px}
+.drop-zone p{font-size:12px;color:#64748b}
+.drop-zone input{display:none}
+.progress-wrap{background:#e2e8f0;border-radius:99px;height:8px;overflow:hidden;margin:12px 0}
+.progress-bar{height:100%;background:linear-gradient(90deg,#7c3aed,#FFD100);transition:width .3s ease;border-radius:99px}
+.status{font-size:12px;color:#64748b;font-family:'DM Mono',monospace;margin-top:6px}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}
+.stat{background:#f8fafc;border-radius:10px;padding:14px;text-align:center}
+.stat .val{font-size:24px;font-weight:800;color:#7c3aed}
+.stat .lbl{font-size:11px;color:#64748b;margin-top:2px}
+.stat.red .val{color:#ef4444}
+.stat.green .val{color:#10b981}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#f1f5f9;padding:8px 10px;text-align:left;font-weight:700;color:#475569;border-bottom:1.5px solid #e2e8f0}
+td{padding:7px 10px;border-bottom:1px solid #f1f5f9;color:#334155}
+tr:hover td{background:#f8fafc}
+.alert{padding:12px 16px;border-radius:9px;font-size:13px;font-weight:500;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.alert-info{background:#f3e8ff;color:#6d28d9;border:1px solid #ddd6fe}
+.alert-success{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+.alert-warn{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">⬆ Carga DATA CROSS</div>
+    <div class="sub">Colsubsidio · BigQuery Uploader</div>
+  </div>
+  <div class="badge">CROSS</div>
+</header>
+
+<div class="container">
+
+  <!-- LOGIN -->
+  <div class="card" id="login-card">
+    <div style="text-align:center;padding:32px">
+      <div style="font-size:32px;margin-bottom:12px">🔐</div>
+      <h3 style="margin-bottom:8px;font-size:16px">Inicia sesión para continuar</h3>
+      <p style="color:#64748b;font-size:13px;margin-bottom:20px">Se solicita acceso de escritura a BigQuery para cargar los datos</p>
+      <button class="btn btn-primary" onclick="doLogin()">Iniciar sesión con Google</button>
+    </div>
+  </div>
+
+  <!-- INSTRUCCIONES -->
+  <div class="card hidden" id="main-card">
+    <h2><span>1</span> Instrucciones y plantilla</h2>
+    <div class="alert alert-info">
+      📋 El archivo CSV debe usar <strong>punto y coma (;)</strong> como separador. La columna <strong>entrega</strong> es obligatoria y es la llave maestra — registros existentes se actualizan, nuevos se crean.
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="downloadTemplate()">📥 Descargar plantilla CSV</button>
+      <a href="index.html" class="btn btn-ghost" style="text-decoration:none">← Volver al BI</a>
+    </div>
+    <div style="margin-top:16px">
+      <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px;text-transform:uppercase">Columnas de fecha — formato requerido: D/M/AAAA HH:MM:SS</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <span style="background:#f3e8ff;color:#7c3aed;font-size:10px;padding:3px 8px;border-radius:20px;font-family:'DM Mono',monospace">fecha_recoleccion</span>
+        <span style="background:#f3e8ff;color:#7c3aed;font-size:10px;padding:3px 8px;border-radius:20px;font-family:'DM Mono',monospace">fecha_entrega</span>
+        <span style="background:#f3e8ff;color:#7c3aed;font-size:10px;padding:3px 8px;border-radius:20px;font-family:'DM Mono',monospace">fecha_creacion</span>
+        <span style="background:#f3e8ff;color:#7c3aed;font-size:10px;padding:3px 8px;border-radius:20px;font-family:'DM Mono',monospace">fecha_aceptacion_1</span>
+        <span style="background:#f3e8ff;color:#7c3aed;font-size:10px;padding:3px 8px;border-radius:20px;font-family:'DM Mono',monospace">fecha_llegada_1</span>
+        <span style="background:#f3e8ff;color:#7c3aed;font-size:10px;padding:3px 8px;border-radius:20px;font-family:'DM Mono',monospace">fecha_cierre_o_congelado</span>
+        <span style="background:#f3e8ff;color:#7c3aed;font-size:10px;padding:3px 8px;border-radius:20px;font-family:'DM Mono',monospace">fecha_reprogramado</span>
+        <span style="background:#f3e8ff;color:#7c3aed;font-size:10px;padding:3px 8px;border-radius:20px;font-family:'DM Mono',monospace">fecha_aceptacion_final</span>
+        <span style="background:#f3e8ff;color:#7c3aed;font-size:10px;padding:3px 8px;border-radius:20px;font-family:'DM Mono',monospace">fecha_llegada_final</span>
+        <span style="background:#f3e8ff;color:#7c3aed;font-size:10px;padding:3px 8px;border-radius:20px;font-family:'DM Mono',monospace">fecha_cierre_final</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARGA -->
+  <div class="card hidden" id="upload-card">
+    <h2><span>2</span> Seleccionar archivo</h2>
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <input type="file" id="file-input" accept=".csv" onchange="onFileSelect(event)"/>
+      <div class="icon">📂</div>
+      <h3>Arrastra el CSV aquí o haz clic para seleccionar</h3>
+      <p>Archivos .csv · separador punto y coma · codificación Latin-1 o UTF-8</p>
+    </div>
+  </div>
+
+  <!-- PROGRESO -->
+  <div class="card hidden" id="progress-card">
+    <h2><span>3</span> Procesando</h2>
+    <div class="progress-wrap"><div class="progress-bar" id="prog-bar" style="width:0%"></div></div>
+    <div class="status" id="prog-status">Iniciando…</div>
+    <div class="stats-row">
+      <div class="stat"><div class="val" id="st-total">0</div><div class="lbl">Total filas</div></div>
+      <div class="stat green"><div class="val" id="st-ok">0</div><div class="lbl">Válidas</div></div>
+      <div class="stat red"><div class="val" id="st-err">0</div><div class="lbl">Con errores</div></div>
+    </div>
+  </div>
+
+  <!-- ERRORES -->
+  <div class="card hidden" id="errors-card">
+    <h2><span>⚠</span> Registros con errores</h2>
+    <div class="alert alert-warn" id="err-summary"></div>
+    <div style="margin-bottom:12px">
+      <button class="btn btn-red" onclick="downloadErrors()">📥 Descargar errores CSV</button>
+    </div>
+    <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
+      <table><thead id="err-head"></thead><tbody id="err-body"></tbody></table>
+    </div>
+  </div>
+
+  <!-- RESULTADO -->
+  <div class="card hidden" id="result-card">
+    <h2><span>✓</span> Resultado</h2>
+    <div id="result-msg"></div>
+    <div style="margin-top:16px;display:flex;gap:10px">
+      <button class="btn btn-ghost" onclick="resetUploader()">Cargar otro archivo</button>
+      <a href="index.html" class="btn btn-primary" style="text-decoration:none">Ver BI</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const BQ_PROJECT = 'bi-colsubsidio';
+const BQ_DATASET = 'colsubsidio_data';
+const BQ_TABLE   = 'DATA_CROSS';
+const BQ_KEY     = 'entrega';
+const CLIENT_ID  = '265970220545-qcple3946s4cdccg69n3840pl0n144h3.apps.googleusercontent.com';
+const BATCH_SIZE = 80;
+
+const DATE_COLS = new Set([
+  'fecha_recoleccion','fecha_entrega','fecha_creacion',
+  'fecha_aceptacion_1','fecha_llegada_1','fecha_cierre_o_congelado',
+  'fecha_reprogramado','fecha_aceptacion_final','fecha_llegada_final','fecha_cierre_final'
+]);
+
+// CROSS tiene tipo_servicio_1 en lugar de tipo_de_servicio_g
+const SCHEMA_COLS = [
+  'estado','entrega','codigo_cliente','cliente','fecha_recoleccion','fecha_entrega',
+  'direccion','ciudad','usuario_creador','fecha_creacion','fecha_aceptacion_1',
+  'fecha_llegada_1','fecha_cierre_o_congelado','novedad_1','observacion_1',
+  'cc_recurso_1','placa_1','fecha_reprogramado','fecha_aceptacion_final',
+  'fecha_llegada_final','fecha_cierre_final','novedad_final','observacion_final',
+  'placa_final','cc_recurso','tipo_servicio','especialidad','cod_especialidades',
+  'plataforma','cx_cierre','cy_cierre','foto','cod_g','tipo_servicio_1',
+  'tipo_servicio_2','semana','coordinador','mes_data','ciudad_2','operacin',
+  'cant_servicios','tiempo_creacion_a_aceptacion','tiempo_aceptacion_a_finalizacion'
+];
+
+let TOKEN = null, TOKEN_CLIENT = null;
+let _tokenResolve = null, _tokenReject = null;
+let _errRows = [], _validRows = [], _csvHeaders = [];
+
+function initGIS() {
+  if (!window.google || !google.accounts) { setTimeout(initGIS, 400); return; }
+  TOKEN_CLIENT = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/bigquery',
+    callback: (resp) => {
+      if (resp.error) { if (_tokenReject) _tokenReject(new Error(resp.error)); return; }
+      TOKEN = resp.access_token;
+      setTimeout(() => { TOKEN = null; }, 3500000);
+      if (_tokenResolve) { _tokenResolve(TOKEN); _tokenResolve = null; _tokenReject = null; }
+    }
+  });
+}
+window.addEventListener('load', () => setTimeout(initGIS, 500));
+
+function doLogin() {
+  if (TOKEN) { onAuthenticated(); return; }
+  getToken().then(onAuthenticated).catch(e => alert('Error de autenticación: ' + e.message));
+}
+
+function getToken() {
+  if (TOKEN) return Promise.resolve(TOKEN);
+  return new Promise((resolve, reject) => {
+    _tokenResolve = resolve; _tokenReject = reject;
+    if (TOKEN_CLIENT) TOKEN_CLIENT.requestAccessToken();
+    else setTimeout(() => { initGIS(); if (TOKEN_CLIENT) TOKEN_CLIENT.requestAccessToken(); }, 500);
+  });
+}
+
+function onAuthenticated() {
+  document.getElementById('login-card').classList.add('hidden');
+  document.getElementById('main-card').classList.remove('hidden');
+  document.getElementById('upload-card').classList.remove('hidden');
+  setupDrop();
+}
+
+async function bqJob(sql) {
+  const token = await getToken();
+  const r1 = await fetch(`https://bigquery.googleapis.com/bigquery/v2/projects/${BQ_PROJECT}/jobs`, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configuration: { query: { query: sql, useLegacySql: false } } })
+  });
+  const j1 = await r1.json();
+  if (j1.error) throw new Error(j1.error.message || JSON.stringify(j1.error));
+  const jobId = j1.jobReference.jobId;
+  const location = j1.jobReference.location;
+  while (true) {
+    await new Promise(r => setTimeout(r, 1500));
+    const token2 = await getToken();
+    let url = `https://bigquery.googleapis.com/bigquery/v2/projects/${BQ_PROJECT}/jobs/${jobId}`;
+    if (location) url += '?location=' + encodeURIComponent(location);
+    const r2 = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token2 } });
+    const j2 = await r2.json();
+    if (j2.error) throw new Error(j2.error.message);
+    if (j2.status && j2.status.state === 'DONE') {
+      if (j2.status.errorResult) throw new Error(j2.status.errorResult.message);
+      return j2;
+    }
+  }
+}
+
+function setupDrop() {
+  const zone = document.getElementById('drop-zone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('hover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('hover'));
+  zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('hover'); const f = e.dataTransfer.files[0]; if (f) processFile(f); });
+}
+
+function onFileSelect(e) { const f = e.target.files[0]; if (f) processFile(f); }
+
+function cleanCol(name) { return name.trim().replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase(); }
+function dedupeColumns(cols) {
+  const count={};
+  return cols.map(col=>{ if(col in count){count[col]++;return col+'_'+count[col];}else{count[col]=0;return col;} });
+}
+
+const pad = n => String(n).padStart(2,'0');
+function normalizeDate(val) {
+  if (!val) return { ok:true, val:null };
+  const s = String(val).trim();
+  if (s===''||s==='N/A'||s==='n/a'||s==='N/a') return { ok:true, val:null };
+  let m;
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})$/);
+  if(m) return {ok:true,val:`${m[3]}-${pad(m[2])}-${pad(m[1])} ${pad(m[4])}:${m[5]}:${m[6]}`};
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})$/);
+  if(m) return {ok:true,val:`${m[3]}-${pad(m[2])}-${pad(m[1])} ${pad(m[4])}:${m[5]}:00`};
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m) return {ok:true,val:`${m[3]}-${pad(m[2])}-${pad(m[1])} 00:00:00`};
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return {ok:true,val:s};
+  return {ok:false,val:s,msg:`Fecha inválida: "${s}" — usar D/M/AAAA HH:MM:SS`};
+}
+
+function processFile(file) {
+  const zone = document.getElementById('drop-zone');
+  zone.classList.add('has-file');
+  zone.querySelector('h3').textContent = file.name;
+  zone.querySelector('p').textContent = `${(file.size/1024/1024).toFixed(2)} MB`;
+  document.getElementById('progress-card').classList.remove('hidden');
+  document.getElementById('errors-card').classList.add('hidden');
+  document.getElementById('result-card').classList.add('hidden');
+  setProgress(5, 'Leyendo archivo…');
+  const reader = new FileReader();
+  reader.readAsArrayBuffer(file);
+  reader.onload = (e) => {
+    setProgress(10, 'Detectando codificación…');
+    let text = new TextDecoder('utf-8').decode(e.target.result);
+    if (text.includes('�') || /Ã[€-¿]/.test(text)) text = new TextDecoder('iso-8859-1').decode(e.target.result);
+    setProgress(15, 'Parseando CSV…');
+    Papa.parse(text, { delimiter:';', header:true, skipEmptyLines:true,
+      complete:(res)=>validateAndUpload(res),
+      error:(err)=>{ setProgress(0,'Error leyendo CSV: '+err.message); }
+    });
+  };
+}
+
+function validateAndUpload(parsed) {
+  setProgress(25, 'Validando datos…');
+  const rawHeaders = parsed.meta.fields || [];
+  const cleanedHeaders = dedupeColumns(rawHeaders.map(cleanCol));
+  _csvHeaders = cleanedHeaders;
+  if (!cleanedHeaders.includes(BQ_KEY)) { alert(`❌ El CSV no tiene la columna "${BQ_KEY}". Revisa la plantilla.`); return; }
+  const totalRows = parsed.data.length;
+  _errRows = []; _validRows = [];
+  parsed.data.forEach((raw, idx) => {
+    const row = {};
+    rawHeaders.forEach((h,i) => { row[cleanedHeaders[i]] = raw[h] !== undefined ? raw[h] : ''; });
+    const errors = [];
+    const entrega = (row[BQ_KEY]||'').trim();
+    if (!entrega) errors.push('entrega vacía');
+    DATE_COLS.forEach(col => {
+      if (col in row) {
+        const res = normalizeDate(row[col]);
+        if (!res.ok) errors.push(res.msg);
+        else row[col] = res.val;
+      }
+    });
+    if (errors.length > 0) _errRows.push({_fila:idx+2,_errores:errors.join(' | '),...row});
+    else _validRows.push(row);
+  });
+
+  // Deduplicar por entrega dentro del archivo — la llave debe ser única.
+  // Se conserva la última aparición de cada entrega.
+  const byKey = new Map();
+  let dupCount = 0;
+  _validRows.forEach(r => {
+    const k = (r[BQ_KEY]||'').trim();
+    if (byKey.has(k)) dupCount++;
+    byKey.set(k, r);
+  });
+  _validRows = Array.from(byKey.values());
+
+  updateStats(totalRows, _validRows.length, _errRows.length);
+  if (_errRows.length > 0) showErrors();
+  if (dupCount > 0) {
+    document.getElementById('errors-card').classList.remove('hidden');
+    const s = document.getElementById('err-summary');
+    s.innerHTML = (s.innerHTML ? s.innerHTML + '<br>' : '') +
+      `🔁 Se encontraron <strong>${dupCount}</strong> registro(s) con "entrega" repetida en el archivo. Se conservó solo la última ocurrencia de cada uno.`;
+  }
+  if (_validRows.length > 0) uploadToBQ();
+  else setProgress(100, 'No hay filas válidas para cargar.');
+}
+
+function updateStats(total,ok,err) {
+  document.getElementById('st-total').textContent=total.toLocaleString('es-CO');
+  document.getElementById('st-ok').textContent=ok.toLocaleString('es-CO');
+  document.getElementById('st-err').textContent=err.toLocaleString('es-CO');
+}
+
+function showErrors() {
+  document.getElementById('errors-card').classList.remove('hidden');
+  document.getElementById('err-summary').textContent=`⚠ ${_errRows.length} fila(s) con errores no se cargarán. Descarga el reporte para corregirlas.`;
+  const preview = _errRows.slice(0,100);
+  const cols = ['_fila','_errores',BQ_KEY,'estado','cliente','ciudad'];
+  document.getElementById('err-head').innerHTML='<tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr>';
+  document.getElementById('err-body').innerHTML=preview.map(r=>'<tr>'+cols.map(c=>`<td>${r[c]!==undefined?r[c]:''}</td>`).join('')+'</tr>').join('');
+}
+
+function getBQCols(sampleRow) { return SCHEMA_COLS.filter(c => c in sampleRow); }
+function esc(v) {
+  if(v===null||v===undefined||v==='') return 'NULL';
+  const s=String(v)
+    .replace(/\\/g,'\\\\')
+    .replace(/'/g,"\\'")
+    .replace(/\n/g,'\\n')
+    .replace(/\r/g,'\\r')
+    .replace(/\t/g,'\\t');
+  return "'"+s+"'";
+}
+
+function buildMergeSql(rows, cols) {
+  const updateCols = cols.filter(c=>c!==BQ_KEY);
+  const structs = rows.map(row=>{
+    // CAST a STRING evita errores de tipo cuando una columna viene NULL en todo el lote.
+    const fields=cols.map(c=>`CAST(${esc(row[c])} AS STRING) AS \`${c}\``);
+    return `STRUCT(${fields.join(', ')})`;
+  }).join(',\n');
+  const setClause=updateCols.map(c=>`T.\`${c}\`=S.\`${c}\``).join(', ');
+  const insCols=cols.map(c=>`\`${c}\``).join(', ');
+  const insVals=cols.map(c=>`S.\`${c}\``).join(', ');
+  return `MERGE \`${BQ_PROJECT}.${BQ_DATASET}.${BQ_TABLE}\` AS T
+USING (SELECT * FROM UNNEST([${structs}])) AS S
+ON T.\`${BQ_KEY}\`=S.\`${BQ_KEY}\`
+WHEN MATCHED THEN UPDATE SET ${setClause}
+WHEN NOT MATCHED THEN INSERT (${insCols}) VALUES (${insVals})`;
+}
+
+async function getTableColumns() {
+  const token = await getToken();
+  const r = await fetch(`https://bigquery.googleapis.com/bigquery/v2/projects/${BQ_PROJECT}/datasets/${BQ_DATASET}/tables/${BQ_TABLE}`,
+    { headers: { 'Authorization': 'Bearer ' + token } });
+  if (!r.ok) { const e = await r.text(); throw new Error('No se pudo leer el esquema de la tabla: ' + r.status + ' ' + e.slice(0, 200)); }
+  const j = await r.json();
+  return (j.schema && j.schema.fields ? j.schema.fields : []).map(f => f.name);
+}
+
+async function uploadToBQ() {
+  setProgress(38, 'Leyendo esquema de la tabla…');
+  let tableCols;
+  try { tableCols = await getTableColumns(); }
+  catch (err) { setProgress(0, '⚠ ' + err.message); alert('Error: ' + err.message); return; }
+  const tableSet = new Set(tableCols);
+  const cols = Object.keys(_validRows[0]).filter(c => tableSet.has(c));
+  if (!cols.includes(BQ_KEY)) {
+    alert(`❌ La tabla en BigQuery no tiene la columna llave "${BQ_KEY}".`);
+    setProgress(0, 'Esquema incompatible.'); return;
+  }
+  const ignored = Object.keys(_validRows[0]).filter(c => !tableSet.has(c) && !c.startsWith('_'));
+  if (ignored.length) console.warn('Columnas del CSV ignoradas (no existen en la tabla):', ignored.join(', '));
+
+  const total = _validRows.length;
+  const batches = Math.ceil(total/BATCH_SIZE);
+  let uploaded=0, failed=0;
+  setProgress(40,`Subiendo a BigQuery — 0 / ${total.toLocaleString('es-CO')} filas…`);
+  for(let b=0;b<batches;b++){
+    const chunk=_validRows.slice(b*BATCH_SIZE,(b+1)*BATCH_SIZE);
+    const pct=40+Math.round(((b+1)/batches)*55);
+    setProgress(pct,`Lote ${b+1}/${batches} — ${uploaded.toLocaleString('es-CO')} filas enviadas…`);
+    try { await bqJob(buildMergeSql(chunk,cols)); uploaded+=chunk.length; }
+    catch(err){ console.error('Error lote',b+1,err); failed+=chunk.length; setProgress(pct,`⚠ Error en lote ${b+1}: ${err.message}`); }
+  }
+  setProgress(100,'Carga completada.');
+  showResult(uploaded,failed);
+}
+
+function showResult(uploaded,failed){
+  document.getElementById('result-card').classList.remove('hidden');
+  const msg=document.getElementById('result-msg');
+  if(failed===0){
+    msg.innerHTML=`<div class="alert alert-success">✅ <strong>${uploaded.toLocaleString('es-CO')} registros cargados correctamente</strong> en BigQuery.<br>Los registros existentes fueron actualizados, los nuevos fueron creados.</div>`;
+  } else {
+    msg.innerHTML=`<div class="alert alert-warn">⚠ <strong>${uploaded.toLocaleString('es-CO')} cargados</strong> · <strong>${failed.toLocaleString('es-CO')} fallaron</strong> (revisa consola F12).</div>`;
+  }
+  if(_errRows.length>0) msg.innerHTML+=`<div class="alert alert-warn" style="margin-top:8px">⚠ <strong>${_errRows.length} filas con errores</strong> no se cargaron.</div>`;
+}
+
+function downloadErrors(){
+  if(!_errRows.length) return;
+  const cols=['_fila','_errores',...Object.keys(_errRows[0]).filter(k=>!k.startsWith('_'))];
+  const lines=[cols.join(';')];
+  _errRows.forEach(r=>lines.push(cols.map(c=>`"${String(r[c]!==undefined?r[c]:'').replace(/"/g,'""')}"`).join(';')));
+  const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='errores_CROSS_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+function downloadTemplate(){
+  const header=SCHEMA_COLS.join(';');
+  const example=SCHEMA_COLS.map(c=>{
+    if(c==='entrega') return 'CR-000001';
+    if(c==='estado') return 'ENTREGADO';
+    if(DATE_COLS.has(c)) return '15/01/2026 10:30:00';
+    return '';
+  }).join(';');
+  const blob=new Blob(['﻿'+header+'\n'+example],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='plantilla_DATA_CROSS.csv';a.click();
+}
+
+function setProgress(pct,msg){
+  document.getElementById('prog-bar').style.width=pct+'%';
+  document.getElementById('prog-status').textContent=msg;
+}
+
+function resetUploader(){
+  _errRows=[];_validRows=[];_csvHeaders=[];
+  const zone=document.getElementById('drop-zone');
+  zone.classList.remove('has-file');
+  zone.querySelector('h3').textContent='Arrastra el CSV aquí o haz clic para seleccionar';
+  zone.querySelector('p').textContent='Archivos .csv · separador punto y coma · codificación Latin-1 o UTF-8';
+  document.getElementById('file-input').value='';
+  document.getElementById('progress-card').classList.add('hidden');
+  document.getElementById('errors-card').classList.add('hidden');
+  document.getElementById('result-card').classList.add('hidden');
+  setProgress(0,'Iniciando…');
+  updateStats(0,0,0);
+}
+</script>
+</body>
+</html>
