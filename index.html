@@ -2331,25 +2331,16 @@ function fingerprint(rows){
 
 function showError(){
   document.getElementById('loader').innerHTML=`
-  <div style="text-align:center;padding:28px 22px;font-family:'DM Sans',sans-serif;max-width:520px">
-    <div style="font-size:40px;margin-bottom:10px">🔒</div>
-    <div style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:8px">No se pudieron cargar los datos</div>
-    <div style="font-size:12px;color:#64748b;margin-bottom:18px;line-height:1.7">
-      Verifica que ambas hojas estén publicadas:<br>
-      <b>Archivo → Compartir → Publicar en la web → seleccionar hoja → CSV → Publicar</b><br>
-      <span style="color:#94a3b8">Abre la consola del navegador (F12) para ver los errores detallados</span>
-    </div>
-    <div style="margin-bottom:10px;text-align:left">
-      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:3px;text-transform:uppercase">URL hoja NC (gid=0)</div>
-      <input id="m-nc" value="${URLS_NC[0]}" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:11px;font-family:'DM Mono',monospace"/>
-    </div>
-    <div style="margin-bottom:18px;text-align:left">
-      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:3px;text-transform:uppercase">URL hoja CROSS (gid=480391335)</div>
-      <input id="m-cr" value="${URLS_CROSS[0]}" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:11px;font-family:'DM Mono',monospace"/>
+  <div style="text-align:center;padding:28px 22px;font-family:'DM Sans',sans-serif;max-width:480px">
+    <div style="font-size:40px;margin-bottom:10px">⚠️</div>
+    <div style="font-size:16px;font-weight:700;color:white;margin-bottom:8px">No se pudieron cargar los datos</div>
+    <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:22px;line-height:1.7">
+      No se obtuvieron registros desde BigQuery.<br>
+      Verifica tu conexión y que tu cuenta tenga acceso al proyecto.<br>
+      <span style="color:rgba(255,255,255,.4)">Abre la consola (F12) para ver el detalle del error.</span>
     </div>
     <div style="display:flex;gap:8px;justify-content:center">
-      <button onclick="retryManual()" style="padding:9px 20px;background:#005596;color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">🔄 Reintentar</button>
-      <button onclick="document.getElementById('loader').style.display='none'" style="padding:9px 14px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-size:12px;cursor:pointer">Cerrar</button>
+      <button onclick="retryManual()" style="padding:11px 26px;background:#FFD100;color:#003f72;border:none;border-radius:9px;font-size:13px;font-weight:800;cursor:pointer;font-family:'DM Sans',sans-serif">🔄 Reintentar</button>
     </div>
   </div>`;
 }
@@ -2366,7 +2357,7 @@ async function loadData(isRefresh=false){
   if(!RNC.length){
     // Si NC falla, intentar igual con CROSS antes de mostrar error
     setSub('NC sin datos, cargando CROSS…');
-    RCR=await tryFetch(URLS_CROSS,'CROSS');
+    RCR=await tryFetch(BQ_TABLE_CROSS,'CROSS');
     if(!RCR.length){showError();return;}
   }
 
@@ -2456,8 +2447,7 @@ function showCrossBanner(msg,color,autoDismiss=0){
 }
 
 async function retryManual(){
-  const nc=(document.getElementById('m-nc')||{}).value||URLS_NC[0];
-  const cr=(document.getElementById('m-cr')||{}).value||URLS_CROSS[0];
+  BQ_TOKEN=null; // forzar nueva conexión por si el token expiró
   document.getElementById('loader').style.cssText='background:#003f72';
   document.getElementById('loader').innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;gap:0;font-family:'DM Sans',sans-serif"><div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.55);letter-spacing:.15em;text-transform:uppercase;margin-bottom:24px" id="ld-msg">Reintentando…</div><div style="width:220px;height:2px;background:rgba(255,255,255,.12);border-radius:99px;overflow:hidden"><div id="pb" style="height:100%;background:linear-gradient(90deg,#FFD100,#fff);border-radius:99px;width:0;transition:width .4s"></div></div><div id="ld-sub" style="font-size:10px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace;margin-top:10px"></div></div>`;
   RNC=await tryFetch(BQ_TABLE_NC,'DATA NC');
