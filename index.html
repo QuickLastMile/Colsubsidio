@@ -43,6 +43,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--gray);color:var(--text);m
 #ld-track{width:220px;height:2px;background:rgba(255,255,255,.12);border-radius:99px;overflow:hidden;margin-top:0}
 #pb{height:100%;background:linear-gradient(90deg,#FFD100,#fff);border-radius:99px;width:0;transition:width .4s cubic-bezier(.4,0,.2,1)}
 #ld-msg{font-size:11px;font-weight:700;color:rgba(255,255,255,.55);letter-spacing:.15em;text-transform:uppercase;margin-bottom:24px;font-family:'DM Sans',sans-serif}
+#ld-connect-btn:hover{background:#e6bc00!important;transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,0,0,.35)!important}
 #ld-sub{font-size:10px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace;margin-top:10px;min-height:14px;text-align:center}
 #pw{display:none}/* hidden legacy */
 .spinner{display:none}/* hidden legacy */
@@ -240,6 +241,10 @@ thead th.sortable.desc::after{content:' ↓';opacity:1;color:var(--blue)}
   <div class="hdr-r">
     <div class="hdr-update">Actualizado: <span id="hdr-ts">—</span></div>
     <div class="hdr-fecha">Último servicio: <span id="hdr-last">—</span></div>
+  </div>
+  <div style="display:flex;gap:8px;margin-left:12px;flex-shrink:0">
+    <a href="upload-nc.html" style="display:inline-flex;align-items:center;gap:6px;background:#FFD100;color:#003f72;font-size:11px;font-weight:800;padding:7px 13px;border-radius:8px;text-decoration:none;font-family:'DM Sans',sans-serif;white-space:nowrap" title="Cargar datos NC">⬆ NC</a>
+    <a href="upload-cross.html" style="display:inline-flex;align-items:center;gap:6px;background:#7c3aed;color:white;font-size:11px;font-weight:800;padding:7px 13px;border-radius:8px;text-decoration:none;font-family:'DM Sans',sans-serif;white-space:nowrap" title="Cargar datos CROSS">⬆ CROSS</a>
   </div>
 </header>
 
@@ -734,7 +739,7 @@ function startWatchdog(){
     const elapsed=Date.now()-LAST_STAGE_AT;
     if(elapsed>9000){
       const s=document.getElementById('ls-sub');
-      if(s)s.textContent='Sigue cargando. Si permanece aquí mucho tiempo, revisa conexión, permisos de Google Sheets o consola F12.';
+      if(s)s.textContent='Sigue cargando. Si permanece aquí mucho tiempo, revisa tu conexión a internet o la consola F12 para más detalles.';
     }
   },3000);
 }
@@ -2322,7 +2327,7 @@ function showError(){
 }
 
 async function loadData(isRefresh=false){
-  if(!isRefresh){setP(5);setSub('Conectando con BigQuery…');}
+  if(!isRefresh){setP(5);setSub('Cargando datos desde BigQuery…');}
 
   // ── FASE 1: cargar NC y mostrar dashboard de inmediato ──────────────
   setSub('Cargando hoja DATA NC…');
@@ -2654,8 +2659,48 @@ document.getElementById('btn-refresh').addEventListener('click',async()=>{
   }
 });
 
-// BOOT
-loadData();
+// BOOT — mostrar botón de conexión en lugar de auto-cargar
+function initBI(){
+  // Intentar obtener token silenciosamente primero
+  // Si GIS no está listo aún, mostrar botón
+  if(window.BQ_TOKEN){loadData();return;}
+  showLoaderConnectButton();
+}
+
+function showLoaderConnectButton(){
+  const msg=document.getElementById("ld-msg");
+  const track=document.getElementById("ld-track");
+  const sub=document.getElementById("ld-sub");
+  if(msg) msg.textContent="";
+  if(track) track.style.display="none";
+  if(sub){sub.style.display="block";sub.textContent="";}
+  
+  // Crear botón de conexión en el loader
+  let btn=document.getElementById("ld-connect-btn");
+  if(!btn){
+    btn=document.createElement("button");
+    btn.id="ld-connect-btn";
+    btn.textContent="Conectar con Google";
+    btn.style.cssText="margin-top:28px;background:#FFD100;color:#003f72;border:none;border-radius:10px;padding:13px 32px;font-size:14px;font-weight:800;font-family:\"DM Sans\",sans-serif;cursor:pointer;letter-spacing:.01em;box-shadow:0 4px 20px rgba(0,0,0,.25)";
+    btn.onclick=function(){
+      btn.disabled=true;btn.textContent="Conectando…";
+      const track2=document.getElementById("ld-track");
+      if(track2) track2.style.display="block";
+      const msg2=document.getElementById("ld-msg");
+      if(msg2) msg2.textContent="Cargando datos";
+      getBQToken()
+        .then(()=>loadData())
+        .catch(err=>{
+          btn.disabled=false;btn.textContent="Reconectar";
+          const s=document.getElementById("ld-sub");
+          if(s){s.style.display="block";s.textContent="Error: "+err.message;}
+        });
+    };
+    document.getElementById("loader").appendChild(btn);
+  }
+}
+
+initBI();
 </script>
 </body>
 </html>
