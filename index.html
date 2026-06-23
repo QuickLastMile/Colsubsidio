@@ -527,47 +527,93 @@ const BQ_PROJECT='bi-colsubsidio';
 const BQ_DATASET='colsubsidio_data';
 const BQ_TABLE_NC='DATA_NC';
 const BQ_TABLE_CROSS='DATA_CROSS';
-const BQ_ENDPOINT=`https://bigquery.googleapis.com/bigquery/v2/projects/${BQ_PROJECT}/queries`;
+const BQ_CLIENT_ID='265970220545-qcple3946s4cdccg69n3840pl0n144h3.apps.googleusercontent.com';
 
-// Token OAuth2 — se obtiene automáticamente con Google Identity Services
 let BQ_TOKEN=null;
+let BQ_TOKEN_CLIENT=null;
+let BQ_TOKEN_RESOLVE=null,BQ_TOKEN_REJECT=null;
 
-async function getBQToken(){
-  if(BQ_TOKEN)return BQ_TOKEN;
+// Inicializar cliente cuando GIS esté listo
+function initGIS(){
+  if(!window.google||!google.accounts)return;
+  BQ_TOKEN_CLIENT=google.accounts.oauth2.initTokenClient({
+    client_id:BQ_CLIENT_ID,
+    scope:'https://www.googleapis.com/auth/bigquery.readonly',
+    callback:(resp)=>{
+      if(resp.error){if(BQ_TOKEN_REJECT)BQ_TOKEN_REJECT(new Error(resp.error));return;}
+      BQ_TOKEN=resp.access_token;
+      setTimeout(()=>{BQ_TOKEN=null;},3500*1000);
+      if(BQ_TOKEN_RESOLVE)BQ_TOKEN_RESOLVE(BQ_TOKEN);
+    }
+  });
+}
+window.addEventListener('load',()=>setTimeout(initGIS,500));
+
+function getBQToken(){
+  if(BQ_TOKEN)return Promise.resolve(BQ_TOKEN);
   return new Promise((resolve,reject)=>{
-    google.accounts.oauth2.initTokenClient({
-      client_id:'265970220545-qcple3946s4cdccg69n3840pl0n144h3.apps.googleusercontent.com',
-      scope:'https://www.googleapis.com/auth/bigquery.readonly',
-      callback:(resp)=>{
-        if(resp.error){reject(resp);return;}
-        BQ_TOKEN=resp.access_token;
-        // Token expira en 1h — limpiar para renovar
-        setTimeout(()=>{BQ_TOKEN=null;},3500*1000);
-        resolve(BQ_TOKEN);
-      }
-    }).requestAccessToken();
+    BQ_TOKEN_RESOLVE=resolve;
+    BQ_TOKEN_REJECT=reject;
+    if(BQ_TOKEN_CLIENT){BQ_TOKEN_CLIENT.requestAccessToken();}
+    else{
+      // GIS aún no cargó — mostrar botón de login
+      showLoginButton(resolve,reject);
+    }
   });
 }
 
-async function queryBigQuery(sql){
+function showLoginButton(resolve,reject){
+  document.getElementById('loader').innerHTML=`
+    <div style="display:flex;flex-direction:column;align-items:center;gap:20px;font-family:'DM Sans',sans-serif;padding:40px">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3C/svg%3E" style="display:none"/>
+      <div style="font-size:14px;font-weight:700;color:rgba(255,255,255,.9)">Para acceder a los datos debes iniciar sesión con Google</div>
+      <button onclick="triggerLogin()" style="background:#FFD100;color:#003f72;font-weight:800;font-size:14px;padding:12px 28px;border:none;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif">
+        Iniciar sesión con Google
+      </button>
+      <div style="font-size:11px;color:rgba(255,255,255,.4)">Solo se solicita acceso de lectura a BigQuery</div>
+    </div>`;
+  window._loginResolve=resolve;
+  window._loginReject=reject;
+}
+
+function triggerLogin(){
+  BQ_TOKEN_RESOLVE=window._loginResolve;
+  BQ_TOKEN_REJECT=window._loginReject;
+  // Restaurar loader
+  document.getElementById('loader').innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;gap:0;font-family:'DM Sans',sans-serif"><div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.55);letter-spacing:.15em;text-transform:uppercase;margin-bottom:24px" id="ld-msg">Conectando…</div><div style="width:220px;height:2px;background:rgba(255,255,255,.12);border-radius:99px;overflow:hidden"><div id="pb" style="height:100%;background:linear-gradient(90deg,#FFD100,#fff);border-radius:99px;width:0;transition:width .4s"></div></div><div id="ld-sub" style="font-size:10px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace;margin-top:10px"></div></div>`;
+  if(BQ_TOKEN_CLIENT){BQ_TOKEN_CLIENT.requestAccessToken();}
+  else{setTimeout(()=>{initGIS();if(BQ_TOKEN_CLIENT)BQ_TOKEN_CLIENT.requestAccessToken();},300);}
+}
+
+async function bqFetchPage(sql,pageToken=null){
   const token=await getBQToken();
-  const resp=await fetch(BQ_ENDPOINT,{
+  const body={query:sql,useLegacySql:false,timeoutMs:120000,maxResults:50000};
+  if(pageToken)body.pageToken=pageToken;
+  const resp=await fetch(`https://bigquery.googleapis.com/bigquery/v2/projects/${BQ_PROJECT}/queries`,{
     method:'POST',
     headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-    body:JSON.stringify({query:sql,useLegacySql:false,timeoutMs:60000,maxResults:500000})
+    body:JSON.stringify(body)
   });
-  if(!resp.ok){
-    const err=await resp.text();
-    throw new Error('BigQuery error '+resp.status+': '+err.slice(0,200));
-  }
-  const data=await resp.json();
-  if(!data.schema||!data.rows)return[];
-  const fields=data.schema.fields.map(f=>f.name);
-  return data.rows.map(row=>{
-    const obj={};
-    row.f.forEach((cell,i)=>{obj[fields[i]]=cell.v??'';});
-    return obj;
-  });
+  if(!resp.ok){const e=await resp.text();throw new Error('BQ '+resp.status+': '+e.slice(0,300));}
+  return resp.json();
+}
+
+async function queryBigQuery(sql,label=''){
+  let allRows=[],pageToken=null,fields=null,page=0;
+  do{
+    page++;
+    if(label)setWorkStatus(`Cargando ${label}…`,null,`Página ${page} — ${allRows.length.toLocaleString('es-CO')} filas recibidas`);
+    const data=await bqFetchPage(sql,pageToken);
+    if(!fields&&data.schema)fields=data.schema.fields.map(f=>f.name);
+    if(data.rows&&fields){
+      const chunk=data.rows.map(row=>{
+        const obj={};row.f.forEach((cell,i)=>{obj[fields[i]]=cell.v??'';});return obj;
+      });
+      allRows=allRows.concat(chunk);
+    }
+    pageToken=data.pageToken||null;
+  }while(pageToken);
+  return allRows;
 }
 
 // ════════════════════════════════════════════════
@@ -2235,7 +2281,7 @@ async function tryFetch(tabla,label='hoja'){
     setSub(`Consultando BigQuery: ${label}…`);
     setWorkStatus(`Cargando ${label} desde BigQuery…`,null,'Conectando con la base de datos…');
     const sql=`SELECT * FROM \`${BQ_PROJECT}.${BQ_DATASET}.${tabla}\``;
-    const rows=await queryBigQuery(sql);
+    const rows=await queryBigQuery(sql,label);
     console.log(`✅ ${label}: ${rows.length} filas desde BigQuery`);
     return rows;
   }catch(err){
