@@ -244,11 +244,22 @@ thead th.sortable.desc::after{content:' ↓';opacity:1;color:var(--blue)}
     <div class="hdr-fecha">Último servicio: <span id="hdr-last">—</span></div>
   </div>
   <div style="display:flex;gap:8px;margin-left:12px;flex-shrink:0">
-    <a href="upload-nc.html" style="display:inline-flex;align-items:center;gap:6px;background:#FFD100;color:#003f72;font-size:11px;font-weight:800;padding:7px 13px;border-radius:8px;text-decoration:none;font-family:'DM Sans',sans-serif;white-space:nowrap" title="Cargar datos NC">⬆ NC</a>
-    <a href="upload-cross.html" style="display:inline-flex;align-items:center;gap:6px;background:#7c3aed;color:white;font-size:11px;font-weight:800;padding:7px 13px;border-radius:8px;text-decoration:none;font-family:'DM Sans',sans-serif;white-space:nowrap" title="Cargar datos CROSS">⬆ CROSS</a>
+    <button onclick="openUploader('nc')" style="display:inline-flex;align-items:center;gap:6px;background:#FFD100;color:#003f72;font-size:11px;font-weight:800;padding:7px 13px;border:none;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap" title="Cargar datos NC">⬆ NC</button>
+    <button onclick="openUploader('cross')" style="display:inline-flex;align-items:center;gap:6px;background:#7c3aed;color:white;font-size:11px;font-weight:800;padding:7px 13px;border:none;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap" title="Cargar datos CROSS">⬆ CROSS</button>
     <button onclick="cerrarSesion()" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);color:white;font-size:11px;font-weight:700;padding:7px 13px;border:none;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap" title="Cerrar sesión">⎋ Salir</button>
   </div>
 </header>
+
+<!-- MODAL IMPORTADOR (iframe embebido, sin salir del BI) -->
+<div id="uploader-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,30,60,.55);backdrop-filter:blur(3px)">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(980px,calc(100vw - 28px));height:min(90vh,880px);background:#f1f5f9;border-radius:16px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.45);display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:#005596;color:#fff;flex-shrink:0">
+      <div id="uploader-modal-title" style="font-size:13px;font-weight:700;letter-spacing:.02em">Cargar datos</div>
+      <button onclick="closeUploader()" title="Cerrar" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:15px;line-height:1;font-family:'DM Sans',sans-serif">✕</button>
+    </div>
+    <iframe id="uploader-frame" title="Importador" src="about:blank" style="border:0;width:100%;flex:1;background:#f1f5f9"></iframe>
+  </div>
+</div>
 
 <nav id="nav">
   <div class="tab on" data-tab="general">📊 General</div>
@@ -294,6 +305,21 @@ thead th.sortable.desc::after{content:' ↓';opacity:1;color:var(--blue)}
       <input class="fsel" id="f-fecha-fin" type="date" title="Fecha final de entrega" aria-label="Fecha final de entrega"/>
     </label>
     <span class="range-help">Vacío = todos</span>
+  </div>
+  <style>
+    .date-preset{background:#eef2f7;color:#334155;border:1px solid #d8e0ea;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all .12s}
+    .date-preset:hover{background:#dde6f1}
+    .date-preset.on{background:var(--blue,#005596);color:#fff;border-color:var(--blue,#005596)}
+    .date-presets{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+  </style>
+  <div class="date-presets" role="group" aria-label="Accesos rápidos de fecha">
+    <button type="button" class="date-preset" data-p="hoy" onclick="setDatePreset('hoy')">Hoy</button>
+    <button type="button" class="date-preset" data-p="ayer" onclick="setDatePreset('ayer')">Ayer</button>
+    <button type="button" class="date-preset" data-p="semana" onclick="setDatePreset('semana')">Esta semana</button>
+    <button type="button" class="date-preset" data-p="mes" onclick="setDatePreset('mes')">Este mes</button>
+    <button type="button" class="date-preset" data-p="mespasado" onclick="setDatePreset('mespasado')">Mes pasado</button>
+    <button type="button" class="date-preset" data-p="anio" onclick="setDatePreset('anio')">Este año</button>
+    <button type="button" class="date-preset on" data-p="todos" onclick="setDatePreset('todos')">Todos</button>
   </div>
   <button class="brst" id="btn-reset">↺ Limpiar</button>
   <button class="brst" id="btn-refresh" style="background:var(--blue);color:white;display:flex;align-items:center;gap:5px">
@@ -1300,7 +1326,27 @@ function toggleSortV(key){
   buildTiempos(getFiltered());
 }
 
-function mkBarH(id,labels,vals,colors,isPct=false,maxV=null,fullLabels=null){
+// ── Clic en gráfico = filtro (estilo Power BI). Alterna el valor. ──
+function chartFilterClick(type,value){
+  if(value===undefined||value===null||value==='')return;
+  ST[type] = (ST[type]===value) ? '' : value;
+  const selId = type==='ciudad'?'f-ciudad':type==='tipo'?'f-tipo':type==='nov'?'f-nov':null;
+  if(selId){const el=document.getElementById(selId); if(el) el.value=ST[type]||'';}
+  update();
+}
+// Estado vacío: limpia el canvas y escribe un mensaje centrado.
+function mkEmpty(id,msg){
+  if(CHS[id]){CHS[id].destroy();delete CHS[id];}
+  const ctx=document.getElementById(id); if(!ctx)return;
+  const w=ctx.clientWidth||ctx.width||300, h=ctx.clientHeight||ctx.height||200;
+  ctx.width=w; ctx.height=h;
+  const g=ctx.getContext('2d'); g.clearRect(0,0,w,h);
+  g.save(); g.fillStyle='#94a3b8'; g.font="13px 'DM Sans',sans-serif";
+  g.textAlign='center'; g.textBaseline='middle';
+  g.fillText(msg||'Sin datos disponibles', w/2, h/2); g.restore();
+}
+
+function mkBarH(id,labels,vals,colors,isPct=false,maxV=null,fullLabels=null,filterType=null){
   // Destroy existing chart instance without removing the canvas from DOM
   if(CHS[id]){CHS[id].destroy();delete CHS[id];}
   const ctx=document.getElementById(id);
@@ -1339,8 +1385,10 @@ function mkBarH(id,labels,vals,colors,isPct=false,maxV=null,fullLabels=null){
       indexAxis:'y',
       plugins:{legend:{display:false},tooltip:{callbacks:{
         title:tt=>tLabels[tt[0].dataIndex]||tt[0].label,
-        label:c=>isPct?` ${c.raw.toFixed(1)}%`:` ${fmt(c.raw)}`
+        label:c=>(isPct?` ${c.raw.toFixed(1)}%`:` ${fmt(c.raw)}`)+(filterType?'  ·  clic para filtrar':'')
       }}},
+      onClick:(evt,els)=>{ if(filterType&&els&&els.length){ const i=els[0].index; const v=(tLabels&&tLabels[i]!=null)?tLabels[i]:labels[i]; chartFilterClick(filterType,v);} },
+      onHover:(evt,els)=>{ if(filterType&&evt&&evt.native&&evt.native.target){ evt.native.target.style.cursor=els.length?'pointer':'default'; } },
       scales:{
         x:{beginAtZero:true,...(isPct?{max:maxV||100,ticks:{callback:v=>v+'%',font:{family:'DM Mono',size:10}}}:{ticks:{font:{family:'DM Mono',size:10}}}),grid:{color:'#f1f5f9'}},
         y:{ticks:{font:{family:'DM Sans',size:10}},grid:{display:false}}
@@ -1350,12 +1398,15 @@ function mkBarH(id,labels,vals,colors,isPct=false,maxV=null,fullLabels=null){
 }
 
 
-function mkDonut(id,labels,vals,colors){
+function mkDonut(id,labels,vals,colors,filterValues=null,filterType=null){
   dc(id);const ctx=document.getElementById(id);if(!ctx)return;
   CHS[id]=new Chart(ctx.getContext('2d'),{
     type:'doughnut',
     data:{labels,datasets:[{data:vals,backgroundColor:colors,borderWidth:0,hoverOffset:8}]},
-    options:{responsive:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{font:{family:'DM Sans',size:10},boxWidth:10}}}}
+    options:{responsive:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{font:{family:'DM Sans',size:10},boxWidth:10}}},
+      onClick:(evt,els)=>{ if(filterType&&filterValues&&els&&els.length){ chartFilterClick(filterType, filterValues[els[0].index]); } },
+      onHover:(evt,els)=>{ if(filterType&&evt&&evt.native&&evt.native.target){ evt.native.target.style.cursor=els.length?'pointer':'default'; } }
+    }
   });
 }
 
@@ -1501,7 +1552,7 @@ function buildCiuVol(data){
   const c={};data.forEach(r=>{const x=getCiu(r);if(x!=='SIN CIUDAD')c[x]=(c[x]||0)+1;});
   let top=Object.entries(c).sort((a,b)=>BSORT.vol==='desc'?b[1]-a[1]:a[1]-b[1]);if(!top.length)return;
   const colors_vol=top.map(()=>'#005596');
-  mkBarH('ch-vol',top.map(x=>abreviar(x[0]).slice(0,20)),top.map(x=>x[1]),colors_vol,false,null,top.map(x=>x[0]));
+  mkBarH('ch-vol',top.map(x=>abreviar(x[0]).slice(0,20)),top.map(x=>x[1]),colors_vol,false,null,top.map(x=>x[0]),'ciudad');
 }
 
 function buildCiuEfe(data){
@@ -1512,13 +1563,13 @@ function buildCiuEfe(data){
   const vMap=Object.fromEntries(top.map(x=>[x[0],pct(e[x[0]]||0,x[1])]));
   top=top.sort((a,b)=>BSORT.efec==='desc'?vMap[b[0]]-vMap[a[0]]:vMap[a[0]]-vMap[b[0]]);
   const vals=top.map(x=>vMap[x[0]]);
-  mkBarH('ch-efe-c',top.map(x=>abreviar(x[0]).slice(0,20)),vals,vals.map(v=>v>=90?'#10b981':v>=70?'#f59e0b':'#ef4444'),true,null,top.map(x=>x[0]));
+  mkBarH('ch-efe-c',top.map(x=>abreviar(x[0]).slice(0,20)),vals,vals.map(v=>v>=90?'#10b981':v>=70?'#f59e0b':'#ef4444'),true,null,top.map(x=>x[0]),'ciudad');
 }
 
 function buildTipoVol(data){
   const c={};data.forEach(r=>{const t=getTipo(r);c[t]=(c[t]||0)+1;});
   const sorted=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,10);if(!sorted.length)return;
-  mkDonut('ch-tipo-vol',sorted.map(x=>abreviar(x[0]).slice(0,22)),sorted.map(x=>x[1]),P12.slice(0,sorted.length));
+  mkDonut('ch-tipo-vol',sorted.map(x=>abreviar(x[0]).slice(0,22)),sorted.map(x=>x[1]),P12.slice(0,sorted.length),sorted.map(x=>x[0]),'tipo');
 }
 
 function buildTipoEfe(data){
@@ -1991,6 +2042,8 @@ function buildTiempos(baseData){
       {title:tt=>topAlistCiu[tt[0].dataIndex][0],label:c=>`${fmtHrs(c.raw)} · ${hrsToDias(c.raw)}`},
       null
     );
+  } else {
+    mkEmpty('ch-ti-alist-ciu','Sin datos de alistamiento (columna vacía o con formato incorrecto en el origen)');
   }
 
   if(topEntrCiu.length){
@@ -2002,6 +2055,8 @@ function buildTiempos(baseData){
       {title:tt=>topEntrCiu[tt[0].dataIndex][0],label:c=>`${fmtHrs(c.raw)} · ${hrsToDias(c.raw)}`},
       null
     );
+  } else {
+    mkEmpty('ch-ti-entr-ciu','Sin datos de entrega válidos');
   }
 
   // --- GRÁFICA 4: Por tipo de servicio ---
@@ -2549,12 +2604,33 @@ function mselClearAll(id){
 }
 
 // f-esp handled by mselToggle
+function setDatePreset(p){
+  const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const now=new Date(); now.setHours(0,0,0,0);
+  let ini='',fin='';
+  if(p==='hoy'){ini=fin=fmt(now);}
+  else if(p==='ayer'){const y=new Date(now);y.setDate(y.getDate()-1);ini=fin=fmt(y);}
+  else if(p==='semana'){const d=new Date(now);const dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);ini=fmt(d);fin=fmt(now);}
+  else if(p==='mes'){ini=fmt(new Date(now.getFullYear(),now.getMonth(),1));fin=fmt(now);}
+  else if(p==='mespasado'){ini=fmt(new Date(now.getFullYear(),now.getMonth()-1,1));fin=fmt(new Date(now.getFullYear(),now.getMonth(),0));}
+  else if(p==='anio'){ini=fmt(new Date(now.getFullYear(),0,1));fin=fmt(now);}
+  // 'todos' deja ambos vacíos
+  const eI=document.getElementById('f-fecha-inicio'), eF=document.getElementById('f-fecha-fin');
+  if(eI)eI.value=ini; if(eF)eF.value=fin;
+  ST.fechaInicio=ini; ST.fechaFin=fin;
+  document.querySelectorAll('.date-preset').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
+  update();
+}
+
 ['f-fecha-inicio','f-fecha-fin'].forEach(id=>{
   const el=document.getElementById(id);
   if(!el)return;
   el.addEventListener('change',()=>{
     ST.fechaInicio=document.getElementById('f-fecha-inicio').value;
     ST.fechaFin=document.getElementById('f-fecha-fin').value;
+    // Al cambiar fechas a mano, ningún preset queda activo (salvo que coincida con vacío)
+    document.querySelectorAll('.date-preset').forEach(b=>b.classList.remove('on'));
+    if(!ST.fechaInicio&&!ST.fechaFin){const t=document.querySelector('.date-preset[data-p="todos"]');if(t)t.classList.add('on');}
     update();
   });
 });
@@ -2562,6 +2638,7 @@ document.getElementById('srch').addEventListener('input',e=>{ST.srch=e.target.va
 document.getElementById('btn-reset').addEventListener('click',()=>{
   ST={nc:true,cross:true,ciudad:'',tipo:'',nov:'',esp:new Set(),fechaInicio:'',fechaFin:'',srch:''};
   ['f-ciudad','f-tipo','f-nov','f-fecha-inicio','f-fecha-fin','srch'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.querySelectorAll('.date-preset').forEach(b=>b.classList.toggle('on',b.dataset.p==='todos'));
   mselClearAll('esp');
   document.querySelectorAll('.pill[data-o]').forEach(p=>p.classList.add('on'));
   update();
@@ -2686,6 +2763,27 @@ function traducirErrorAuth(err){
 function cerrarSesion(){
   AUTH.signOut().then(()=>location.reload());
 }
+
+// ── Modal importador (iframe embebido) ──
+function openUploader(type){
+  const modal=document.getElementById('uploader-modal');
+  const frame=document.getElementById('uploader-frame');
+  const title=document.getElementById('uploader-modal-title');
+  frame.src = type==='cross' ? 'upload-cross.html' : 'upload-nc.html';
+  title.textContent = type==='cross' ? '⬆ Cargar DATA CROSS' : '⬆ Cargar DATA NC';
+  modal.style.display='block';
+  document.body.style.overflow='hidden';
+}
+function closeUploader(){
+  const modal=document.getElementById('uploader-modal');
+  document.getElementById('uploader-frame').src='about:blank';
+  modal.style.display='none';
+  document.body.style.overflow='';
+}
+// Cerrar con tecla Escape
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&document.getElementById('uploader-modal').style.display==='block')closeUploader();
+});
 
 initBI();
 </script>

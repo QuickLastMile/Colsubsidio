@@ -4,7 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Cargar DATA CROSS · Colsubsidio</title>
-<script src="https://accounts.google.com/gsi/client" async></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
@@ -70,11 +71,19 @@ tr:hover td{background:#f8fafc}
 
   <!-- LOGIN -->
   <div class="card" id="login-card">
-    <div style="text-align:center;padding:32px">
-      <div style="font-size:32px;margin-bottom:12px">🔐</div>
-      <h3 style="margin-bottom:8px;font-size:16px">Inicia sesión para continuar</h3>
-      <p style="color:#64748b;font-size:13px;margin-bottom:20px">Se solicita acceso de escritura a BigQuery para cargar los datos</p>
-      <button class="btn btn-primary" onclick="doLogin()">Iniciar sesión con Google</button>
+    <div style="max-width:360px;margin:0 auto">
+      <div style="font-size:32px;margin-bottom:12px;text-align:center">🔐</div>
+      <h3 style="margin-bottom:6px;font-size:16px;text-align:center">Inicia sesión para continuar</h3>
+      <p style="color:#64748b;font-size:13px;margin-bottom:18px;text-align:center">Usa el mismo usuario del BI</p>
+      <form onsubmit="doLogin(event)">
+        <input id="lf-email" type="email" placeholder="Correo" autocomplete="username" required
+          style="width:100%;padding:12px 13px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:14px;margin-bottom:10px;font-family:'DM Sans',sans-serif;outline:none"/>
+        <input id="lf-pass" type="password" placeholder="Contraseña" autocomplete="current-password" required
+          style="width:100%;padding:12px 13px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:14px;margin-bottom:14px;font-family:'DM Sans',sans-serif;outline:none"/>
+        <button id="lf-btn" type="submit" class="btn btn-primary" style="width:100%;justify-content:center">Ingresar</button>
+      </form>
+      <div id="lf-err" style="color:#dc2626;font-size:12px;text-align:center;margin-top:12px"></div>
+      <div style="text-align:center;margin-top:14px"><a href="index.html" style="color:#64748b;font-size:12px;text-decoration:none">← Volver al BI</a></div>
     </div>
   </div>
 
@@ -153,12 +162,21 @@ tr:hover td{background:#f8fafc}
 </div>
 
 <script>
-const BQ_PROJECT = 'bi-colsubsidio';
-const BQ_DATASET = 'colsubsidio_data';
+const BACKEND_URL = 'https://bi-data-768668656372.us-central1.run.app';
 const BQ_TABLE   = 'DATA_CROSS';
 const BQ_KEY     = 'entrega';
-const CLIENT_ID  = '265970220545-qcple3946s4cdccg69n3840pl0n144h3.apps.googleusercontent.com';
 const BATCH_SIZE = 80;
+
+const firebaseConfig = {
+  apiKey:"AIzaSyDFpZhrpN2ckn8UDY-o8MlBMVR7DH8rRkk",
+  authDomain:"colsubsidio-382a4.firebaseapp.com",
+  projectId:"colsubsidio-382a4",
+  storageBucket:"colsubsidio-382a4.firebasestorage.app",
+  messagingSenderId:"768668656372",
+  appId:"1:768668656372:web:3e2a10818b25b8fc6074a1"
+};
+firebase.initializeApp(firebaseConfig);
+const AUTH = firebase.auth();
 
 const DATE_COLS = new Set([
   'fecha_recoleccion','fecha_entrega','fecha_creacion',
@@ -179,37 +197,31 @@ const SCHEMA_COLS = [
   'cant_servicios','tiempo_creacion_a_aceptacion','tiempo_aceptacion_a_finalizacion'
 ];
 
-let TOKEN = null, TOKEN_CLIENT = null;
-let _tokenResolve = null, _tokenReject = null;
 let _errRows = [], _validRows = [], _csvHeaders = [];
 
-function initGIS() {
-  if (!window.google || !google.accounts) { setTimeout(initGIS, 400); return; }
-  TOKEN_CLIENT = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: 'https://www.googleapis.com/auth/bigquery',
-    callback: (resp) => {
-      if (resp.error) { if (_tokenReject) _tokenReject(new Error(resp.error)); return; }
-      TOKEN = resp.access_token;
-      setTimeout(() => { TOKEN = null; }, 3500000);
-      if (_tokenResolve) { _tokenResolve(TOKEN); _tokenResolve = null; _tokenReject = null; }
-    }
-  });
-}
-window.addEventListener('load', () => setTimeout(initGIS, 500));
+// ── AUTH (Firebase — sesión compartida con el BI) ──
+AUTH.onAuthStateChanged(user => {
+  if (user) onAuthenticated();
+  else document.getElementById('login-card').classList.remove('hidden');
+});
 
-function doLogin() {
-  if (TOKEN) { onAuthenticated(); return; }
-  getToken().then(onAuthenticated).catch(e => alert('Error de autenticación: ' + e.message));
-}
-
-function getToken() {
-  if (TOKEN) return Promise.resolve(TOKEN);
-  return new Promise((resolve, reject) => {
-    _tokenResolve = resolve; _tokenReject = reject;
-    if (TOKEN_CLIENT) TOKEN_CLIENT.requestAccessToken();
-    else setTimeout(() => { initGIS(); if (TOKEN_CLIENT) TOKEN_CLIENT.requestAccessToken(); }, 500);
-  });
+function doLogin(ev) {
+  if (ev) ev.preventDefault();
+  const email = (document.getElementById('lf-email') || {}).value || '';
+  const pass = (document.getElementById('lf-pass') || {}).value || '';
+  const btn = document.getElementById('lf-btn');
+  const err = document.getElementById('lf-err');
+  if (err) err.textContent = '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Ingresando…'; }
+  AUTH.signInWithEmailAndPassword(email.trim(), pass)
+    .catch(e => {
+      if (btn) { btn.disabled = false; btn.textContent = 'Ingresar'; }
+      const c = (e && e.code) || '';
+      if (err) err.textContent =
+        c.includes('invalid-credential') || c.includes('wrong-password') || c.includes('user-not-found')
+          ? 'Correo o contraseña incorrectos.'
+          : (e.message || 'No se pudo iniciar sesión.');
+    });
 }
 
 function onAuthenticated() {
@@ -219,30 +231,26 @@ function onAuthenticated() {
   setupDrop();
 }
 
-async function bqJob(sql) {
-  const token = await getToken();
-  const r1 = await fetch(`https://bigquery.googleapis.com/bigquery/v2/projects/${BQ_PROJECT}/jobs`, {
+async function getIdToken() {
+  const u = AUTH.currentUser;
+  if (!u) throw new Error('Sesión no iniciada');
+  return await u.getIdToken();
+}
+
+// Envía un lote de filas al backend (UPSERT por entrega).
+async function postBatch(rows) {
+  const token = await getIdToken();
+  const resp = await fetch(BACKEND_URL, {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ configuration: { query: { query: sql, useLegacySql: false } } })
+    body: JSON.stringify({ action: 'upload', table: BQ_TABLE, key: BQ_KEY, rows })
   });
-  const j1 = await r1.json();
-  if (j1.error) throw new Error(j1.error.message || JSON.stringify(j1.error));
-  const jobId = j1.jobReference.jobId;
-  const location = j1.jobReference.location;
-  while (true) {
-    await new Promise(r => setTimeout(r, 1500));
-    const token2 = await getToken();
-    let url = `https://bigquery.googleapis.com/bigquery/v2/projects/${BQ_PROJECT}/jobs/${jobId}`;
-    if (location) url += '?location=' + encodeURIComponent(location);
-    const r2 = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token2 } });
-    const j2 = await r2.json();
-    if (j2.error) throw new Error(j2.error.message);
-    if (j2.status && j2.status.state === 'DONE') {
-      if (j2.status.errorResult) throw new Error(j2.status.errorResult.message);
-      return j2;
-    }
+  if (!resp.ok) {
+    let msg = 'HTTP ' + resp.status;
+    try { const j = await resp.json(); msg = j.error || msg; } catch (e) {}
+    throw new Error(msg);
   }
+  return resp.json();
 }
 
 function setupDrop() {
@@ -362,67 +370,16 @@ function showErrors() {
   document.getElementById('err-body').innerHTML=preview.map(r=>'<tr>'+cols.map(c=>`<td>${r[c]!==undefined?r[c]:''}</td>`).join('')+'</tr>').join('');
 }
 
-function getBQCols(sampleRow) { return SCHEMA_COLS.filter(c => c in sampleRow); }
-function esc(v) {
-  if(v===null||v===undefined||v==='') return 'NULL';
-  const s=String(v)
-    .replace(/\\/g,'\\\\')
-    .replace(/'/g,"\\'")
-    .replace(/\n/g,'\\n')
-    .replace(/\r/g,'\\r')
-    .replace(/\t/g,'\\t');
-  return "'"+s+"'";
-}
-
-function buildMergeSql(rows, cols) {
-  const updateCols = cols.filter(c=>c!==BQ_KEY);
-  const structs = rows.map(row=>{
-    // CAST a STRING evita errores de tipo cuando una columna viene NULL en todo el lote.
-    const fields=cols.map(c=>`CAST(${esc(row[c])} AS STRING) AS \`${c}\``);
-    return `STRUCT(${fields.join(', ')})`;
-  }).join(',\n');
-  const setClause=updateCols.map(c=>`T.\`${c}\`=S.\`${c}\``).join(', ');
-  const insCols=cols.map(c=>`\`${c}\``).join(', ');
-  const insVals=cols.map(c=>`S.\`${c}\``).join(', ');
-  return `MERGE \`${BQ_PROJECT}.${BQ_DATASET}.${BQ_TABLE}\` AS T
-USING (SELECT * FROM UNNEST([${structs}])) AS S
-ON T.\`${BQ_KEY}\`=S.\`${BQ_KEY}\`
-WHEN MATCHED THEN UPDATE SET ${setClause}
-WHEN NOT MATCHED THEN INSERT (${insCols}) VALUES (${insVals})`;
-}
-
-async function getTableColumns() {
-  const token = await getToken();
-  const r = await fetch(`https://bigquery.googleapis.com/bigquery/v2/projects/${BQ_PROJECT}/datasets/${BQ_DATASET}/tables/${BQ_TABLE}`,
-    { headers: { 'Authorization': 'Bearer ' + token } });
-  if (!r.ok) { const e = await r.text(); throw new Error('No se pudo leer el esquema de la tabla: ' + r.status + ' ' + e.slice(0, 200)); }
-  const j = await r.json();
-  return (j.schema && j.schema.fields ? j.schema.fields : []).map(f => f.name);
-}
-
 async function uploadToBQ() {
-  setProgress(38, 'Leyendo esquema de la tabla…');
-  let tableCols;
-  try { tableCols = await getTableColumns(); }
-  catch (err) { setProgress(0, '⚠ ' + err.message); alert('Error: ' + err.message); return; }
-  const tableSet = new Set(tableCols);
-  const cols = Object.keys(_validRows[0]).filter(c => tableSet.has(c));
-  if (!cols.includes(BQ_KEY)) {
-    alert(`❌ La tabla en BigQuery no tiene la columna llave "${BQ_KEY}".`);
-    setProgress(0, 'Esquema incompatible.'); return;
-  }
-  const ignored = Object.keys(_validRows[0]).filter(c => !tableSet.has(c) && !c.startsWith('_'));
-  if (ignored.length) console.warn('Columnas del CSV ignoradas (no existen en la tabla):', ignored.join(', '));
-
   const total = _validRows.length;
   const batches = Math.ceil(total/BATCH_SIZE);
   let uploaded=0, failed=0;
-  setProgress(40,`Subiendo a BigQuery — 0 / ${total.toLocaleString('es-CO')} filas…`);
+  setProgress(40,`Subiendo — 0 / ${total.toLocaleString('es-CO')} filas…`);
   for(let b=0;b<batches;b++){
     const chunk=_validRows.slice(b*BATCH_SIZE,(b+1)*BATCH_SIZE);
     const pct=40+Math.round(((b+1)/batches)*55);
     setProgress(pct,`Lote ${b+1}/${batches} — ${uploaded.toLocaleString('es-CO')} filas enviadas…`);
-    try { await bqJob(buildMergeSql(chunk,cols)); uploaded+=chunk.length; }
+    try { await postBatch(chunk); uploaded+=chunk.length; }
     catch(err){ console.error('Error lote',b+1,err); failed+=chunk.length; setProgress(pct,`⚠ Error en lote ${b+1}: ${err.message}`); }
   }
   setProgress(100,'Carga completada.');
@@ -480,6 +437,18 @@ function resetUploader(){
   document.getElementById('result-card').classList.add('hidden');
   setProgress(0,'Iniciando…');
   updateStats(0,0,0);
+}
+
+// ── Si está embebido en el modal del BI: ocultar su header y cerrar el modal al "volver" ──
+const EMBEDDED = window.self !== window.top;
+if (EMBEDDED) {
+  const h = document.querySelector('header'); if (h) h.style.display = 'none';
+  document.querySelectorAll('a[href="index.html"]').forEach(a => {
+    a.addEventListener('click', ev => {
+      ev.preventDefault();
+      if (parent && parent.closeUploader) parent.closeUploader();
+    });
+  });
 }
 </script>
 </body>
