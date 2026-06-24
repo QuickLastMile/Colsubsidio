@@ -267,6 +267,7 @@ thead th.sortable.desc::after{content:' ↓';opacity:1;color:var(--blue)}
   <div class="tab" data-tab="tiempos">⏱️ Tiempos</div>
   <div class="tab" data-tab="mapa">🗺️ Mapa de Calor</div>
   <div class="tab" data-tab="detalle">📋 Detalle</div>
+  <div class="tab" data-tab="percapita">💰 Percápitas</div>
 </nav>
 
 <div id="fbar">
@@ -555,6 +556,29 @@ thead th.sortable.desc::after{content:' ↓';opacity:1;color:var(--blue)}
     </div>
     <div class="tw"><table><thead id="det-hd"></thead><tbody id="det-bd"></tbody></table></div>
     <div class="pgn" id="pgn"></div>
+  </div>
+</section>
+
+<!-- ==================== PERCÁPITAS ==================== -->
+<section class="page" id="page-percapita">
+  <div class="card" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+    <div style="font-size:12px;font-weight:700;color:var(--blue)">FILTRAR:</div>
+    <select id="pcp-ciudad" class="fsel" style="font-size:12px"><option value="">Todas las ciudades</option></select>
+    <select id="pcp-modelo" class="fsel" style="font-size:12px"><option value="">Todos los modelos</option></select>
+    <input type="text" id="pcp-srch" class="fin" placeholder="🔍 Buscar punto de venta…" style="width:240px;font-size:12px"/>
+    <div style="margin-left:auto;font-size:11px;color:var(--muted)" id="pcp-info">—</div>
+  </div>
+
+  <div class="ceq">
+    <div class="card"><div class="ct">Percápita Promedio por Mes</div><div class="cs">Costo promedio por domicilio · todos los puntos filtrados</div><canvas id="ch-pcp-tend"></canvas></div>
+    <div class="card"><div class="ct">Servicios Totales por Mes</div><div class="cs">Volumen de domicilios por mes</div><canvas id="ch-pcp-serv"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div><div class="ct">Evolución del Costo Final por Punto de Venta</div><div class="cs">Costo por domicilio mes a mes · 🟢 bajó · 🔴 subió vs mes anterior</div></div>
+    </div>
+    <div class="tw" style="max-height:560px;overflow:auto"><table><thead id="pcp-thead"></thead><tbody id="pcp-tbody"></tbody></table></div>
   </div>
 </section>
 
@@ -2288,6 +2312,114 @@ function populateFilters(data){
 }
 
 // ════════════════════════════════════════════════
+// PERCÁPITAS — costo por domicilio mes a mes
+// ════════════════════════════════════════════════
+const PCP_URL='https://docs.google.com/spreadsheets/d/1sFZl60ezg63q6C4voGQWpJWXHTDE7T6Y/export?format=csv&gid=1298224280';
+const PCP_MESES=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+let PCP=[], PCP_LOADED=false, PCP_LOADING=false;
+
+function parseNumCO(s){
+  if(s===null||s===undefined)return null;
+  s=String(s).trim(); if(!s)return null;
+  s=s.replace(/\$/g,'').replace(/\s/g,'').replace(/\./g,'').replace(/,/g,'.').replace(/[^0-9.\-]/g,'');
+  const v=parseFloat(s); return isNaN(v)?null:v;
+}
+function fmtCOP(v){ if(v===null||v===undefined||isNaN(v))return '—'; return '$'+Math.round(v).toLocaleString('es-CO'); }
+
+function loadPercapita(){
+  return new Promise((resolve)=>{
+    Papa.parse(PCP_URL,{download:true,header:true,skipEmptyLines:true,
+      complete:(res)=>{
+        PCP=(res.data||[]).map(raw=>{
+          const o={};Object.keys(raw).forEach(k=>o[k.trim().toUpperCase()]=raw[k]);
+          const tkKey=Object.keys(o).find(k=>k.includes('TICKET'))||'';
+          return {
+            mes:(o['MES']||'').trim().toUpperCase(), modelo:(o['MODELO']||'').trim(),
+            ciudad:(o['CIUDAD']||'').trim(), pdv:(o['PUNTO DE VENTA']||'').trim(),
+            mensajeros:parseNumCO(o['CANTIDAD MENSAJEROS']), servicios:parseNumCO(o['SERVICIOS']),
+            costo:parseNumCO(o[tkKey])
+          };
+        }).filter(x=>x.pdv&&PCP_MESES.includes(x.mes));
+        PCP_LOADED=true; resolve(true);
+      },
+      error:(err)=>{console.error('Error percápita:',err); PCP_LOADED=false; resolve(false);}
+    });
+  });
+}
+function pcpMesesPresentes(){ const set=new Set(PCP.map(r=>r.mes)); return PCP_MESES.filter(m=>set.has(m)); }
+
+async function buildPercapita(){
+  const tbody=document.getElementById('pcp-tbody'), info=document.getElementById('pcp-info');
+  if(!PCP_LOADED){
+    if(info)info.textContent='Cargando datos…';
+    if(!PCP_LOADING){PCP_LOADING=true; const ok=await loadPercapita(); PCP_LOADING=false;
+      if(!ok){
+        if(info)info.textContent='No se pudo cargar';
+        document.getElementById('pcp-thead').innerHTML='';
+        tbody.innerHTML='<tr><td style="padding:20px;color:#ef4444;line-height:1.6">No se pudo leer la base de percápitas (posible bloqueo CORS).<br>Solución: en Google Sheets, <b>Archivo → Compartir → Publicar en la web → hoja "PER CAPITA" → CSV → Publicar</b>, y pásame esa URL para conectarla.</td></tr>';
+        return;
+      }
+    }
+  }
+  const selCiu=document.getElementById('pcp-ciudad'), selMod=document.getElementById('pcp-modelo');
+  if(selCiu&&selCiu.options.length<=1){[...new Set(PCP.map(r=>r.ciudad).filter(Boolean))].sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;selCiu.appendChild(o);});}
+  if(selMod&&selMod.options.length<=1){[...new Set(PCP.map(r=>r.modelo).filter(Boolean))].sort().forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;selMod.appendChild(o);});}
+  pcpRender();
+}
+
+function pcpRender(){
+  const fCiu=(document.getElementById('pcp-ciudad')||{}).value||'';
+  const fMod=(document.getElementById('pcp-modelo')||{}).value||'';
+  const q=N((document.getElementById('pcp-srch')||{}).value||'');
+  const data=PCP.filter(r=>(!fCiu||r.ciudad===fCiu)&&(!fMod||r.modelo===fMod)&&(!q||N(r.pdv).includes(q)||N(r.ciudad).includes(q)));
+  const meses=pcpMesesPresentes();
+
+  const piv={};
+  data.forEach(r=>{
+    if(!piv[r.pdv])piv[r.pdv]={pdv:r.pdv,ciudad:r.ciudad,modelo:r.modelo,costos:{},serv:{}};
+    piv[r.pdv].ciudad=r.ciudad; piv[r.pdv].modelo=r.modelo;
+    if(r.costo!==null)piv[r.pdv].costos[r.mes]=r.costo;
+    if(r.servicios!==null)piv[r.pdv].serv[r.mes]=r.servicios;
+  });
+  const rows=Object.values(piv);
+  document.getElementById('pcp-info').textContent=`${rows.length} puntos de venta · ${meses.length} meses`;
+
+  const varOf=row=>{const vals=meses.map(m=>row.costos[m]).filter(v=>v!=null&&!isNaN(v));if(vals.length<2)return null;return (vals[vals.length-1]-vals[0])/vals[0]*100;};
+  rows.sort((a,b)=>{const va=varOf(a),vb=varOf(b);return (vb==null?-1e9:vb)-(va==null?-1e9:va);});
+
+  document.getElementById('pcp-thead').innerHTML='<tr><th>Punto de Venta</th><th>Ciudad</th><th>Modelo</th>'+
+    meses.map(m=>`<th style="text-align:right">${m.slice(0,3)}</th>`).join('')+'<th style="text-align:right">Variación</th></tr>';
+
+  document.getElementById('pcp-tbody').innerHTML=rows.map(row=>{
+    let prev=null;
+    const cells=meses.map(m=>{
+      const v=row.costos[m];
+      if(v==null){prev=null;return '<td style="text-align:right;color:#cbd5e1">—</td>';}
+      let color='#334155',arrow='';
+      if(prev!=null){ if(v>prev*1.005){color='#ef4444';arrow=' ▲';} else if(v<prev*0.995){color='#10b981';arrow=' ▼';} }
+      prev=v;
+      return `<td style="text-align:right;color:${color};font-family:'DM Mono',monospace">${fmtCOP(v)}${arrow}</td>`;
+    }).join('');
+    const vr=varOf(row);
+    const vrCell=vr==null?'<td style="text-align:right;color:#cbd5e1">—</td>':`<td style="text-align:right;font-weight:700;color:${vr>0.5?'#ef4444':vr<-0.5?'#10b981':'#64748b'}">${vr>0?'+':''}${vr.toFixed(1)}%</td>`;
+    return `<tr><td title="${row.pdv}">${row.pdv}</td><td>${row.ciudad}</td><td>${row.modelo}</td>${cells}${vrCell}</tr>`;
+  }).join('')||`<tr><td colspan="${meses.length+4}" style="padding:20px;color:#94a3b8">Sin datos para el filtro</td></tr>`;
+
+  const avgMes=meses.map(m=>{const vs=data.filter(r=>r.mes===m&&r.costo!=null).map(r=>r.costo);return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:0;});
+  const servMes=meses.map(m=>{const vs=data.filter(r=>r.mes===m&&r.servicios!=null).map(r=>r.servicios);return vs.reduce((a,b)=>a+b,0);});
+  dc('ch-pcp-tend');const c1=document.getElementById('ch-pcp-tend');
+  if(c1)CHS['ch-pcp-tend']=new Chart(c1.getContext('2d'),{type:'line',
+    data:{labels:meses.map(m=>m.slice(0,3)),datasets:[{label:'Percápita promedio',data:avgMes.map(v=>Math.round(v)),borderColor:'#005596',backgroundColor:'rgba(0,85,150,.08)',fill:true,tension:.3,pointRadius:4,pointBackgroundColor:'#005596'}]},
+    options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtCOP(c.raw)}}},scales:{y:{ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k',font:{family:'DM Mono',size:10}},grid:{color:'#f1f5f9'}},x:{grid:{display:false}}}}});
+  dc('ch-pcp-serv');const c2=document.getElementById('ch-pcp-serv');
+  if(c2)CHS['ch-pcp-serv']=new Chart(c2.getContext('2d'),{type:'bar',
+    data:{labels:meses.map(m=>m.slice(0,3)),datasets:[{label:'Servicios',data:servMes,backgroundColor:'#7c3aed',borderRadius:5}]},
+    options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.toLocaleString('es-CO')+' servicios'}}},scales:{y:{ticks:{font:{family:'DM Mono',size:10}},grid:{color:'#f1f5f9'}},x:{grid:{display:false}}}}});
+}
+['pcp-ciudad','pcp-modelo'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('change',pcpRender);});
+{const e=document.getElementById('pcp-srch');if(e)e.addEventListener('input',pcpRender);}
+
+// ════════════════════════════════════════════════
 // UPDATE ALL
 // ════════════════════════════════════════════════
 function updateKPIsOnly(data){
@@ -2317,6 +2449,8 @@ async function renderTab(tab,data,seq,basePct=20){
     await runStep(seq,'Detalle: tabla paginada',basePct,()=>buildDetail(data));
   }else if(tab==='mapa'){
     await runStep(seq,'Mapa: ubicaciones y calor',basePct,()=>{buildMap(data);setTimeout(()=>MI&&MI.invalidateSize(),250);});
+  }else if(tab==='percapita'){
+    await runStep(seq,'Percápitas: costos por punto',basePct,()=>buildPercapita());
   }
 }
 
