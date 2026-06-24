@@ -389,7 +389,7 @@ thead th.sortable.desc::after{content:' ↓';opacity:1;color:var(--blue)}
     <div class="kpi" style="--ac:var(--orange);--ac-bg:#ffedd5"><div class="kpi-ic">📋</div><div class="kpi-v" id="nk-tipos">—</div><div class="kpi-l">Tipos de Novedad</div></div>
     <div class="kpi" style="--ac:var(--purple);--ac-bg:#ede9fe"><div class="kpi-ic">🏙️</div><div class="kpi-v" id="nk-ciu">—</div><div class="kpi-l">Ciudades Afectadas</div></div>
     <div class="kpi" style="--ac:var(--cyan);--ac-bg:#e0f7fa"><div class="kpi-ic">🔬</div><div class="kpi-v" id="nk-esp">—</div><div class="kpi-l">Especialidades</div></div>
-    <div class="kpi" style="--ac:var(--pink);--ac-bg:#fdf2f8"><div class="kpi-ic">📦</div><div class="kpi-v" id="nk-pct">—</div><div class="kpi-l">% del Total</div></div>
+    <div class="kpi" style="--ac:#10b981;--ac-bg:#d1fae5"><div class="kpi-ic">✅</div><div class="kpi-v" id="nk-pct">—</div><div class="kpi-l">Cumplimiento</div><div class="kpi-sub">entregas sin novedad</div></div>
   </div>
 
   <div class="ceq">
@@ -1688,7 +1688,7 @@ function buildNovedades(data){
   document.getElementById('nk-tipos').textContent=fmt(tiposUniq.size);
   document.getElementById('nk-ciu').textContent=fmt(ciudadesAfect.size);
   document.getElementById('nk-esp').textContent=fmt(espUniq.size);
-  document.getElementById('nk-pct').textContent=fP(pct(novData.length,total));
+  document.getElementById('nk-pct').textContent=fP(pct(total-novData.length,total));
 
   // Donut - solo novedades reales
   const nc={};
