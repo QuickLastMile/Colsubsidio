@@ -2317,6 +2317,12 @@ function populateFilters(data){
 const PCP_URL='https://docs.google.com/spreadsheets/d/1sFZl60ezg63q6C4voGQWpJWXHTDE7T6Y/export?format=csv&gid=1298224280';
 const PCP_MESES=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
 let PCP=[], PCP_LOADED=false, PCP_LOADING=false;
+let PCP_SORT={col:'var',dir:'desc'};
+function pcpSortBy(col){
+  if(PCP_SORT.col===col)PCP_SORT.dir=PCP_SORT.dir==='desc'?'asc':'desc';
+  else{PCP_SORT.col=col;PCP_SORT.dir='desc';}
+  pcpRender();
+}
 
 function parseNumCO(s){
   if(s===null||s===undefined)return null;
@@ -2382,15 +2388,41 @@ function pcpRender(){
     if(r.servicios!==null)piv[r.pdv].serv[r.mes]=r.servicios;
   });
   const rows=Object.values(piv);
+  // Promedio por punto de venta y variación (primer vs último mes con dato)
+  rows.forEach(row=>{
+    const vals=meses.map(m=>row.costos[m]).filter(v=>v!=null&&!isNaN(v));
+    row.prom=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+    const pres=meses.filter(m=>row.costos[m]!=null&&!isNaN(row.costos[m]));
+    if(pres.length>=2){const f=row.costos[pres[0]],l=row.costos[pres[pres.length-1]];row.varp=(f&&f!==0)?(l-f)/f*100:null;}
+    else row.varp=null;
+  });
   document.getElementById('pcp-info').textContent=`${rows.length} puntos de venta · ${meses.length} meses`;
 
-  const varOf=row=>{const vals=meses.map(m=>row.costos[m]).filter(v=>v!=null&&!isNaN(v));if(vals.length<2)return null;return (vals[vals.length-1]-vals[0])/vals[0]*100;};
-  rows.sort((a,b)=>{const va=varOf(a),vb=varOf(b);return (vb==null?-1e9:vb)-(va==null?-1e9:va);});
+  // Ordenamiento por columna
+  const col=PCP_SORT.col,dir=PCP_SORT.dir;
+  const keyVal=row=>{
+    if(col==='pdv')return row.pdv.toLowerCase();
+    if(col==='ciudad')return (row.ciudad||'').toLowerCase();
+    if(col==='modelo')return (row.modelo||'').toLowerCase();
+    if(col==='prom')return row.prom;
+    if(col==='var')return row.varp;
+    if(meses.includes(col))return row.costos[col];
+    return null;
+  };
+  rows.sort((a,b)=>{
+    let va=keyVal(a),vb=keyVal(b);
+    if(va==null&&vb==null)return 0;
+    if(va==null)return 1; if(vb==null)return -1;  // nulos siempre al final
+    const cmp=(typeof va==='string')?va.localeCompare(vb):(va-vb);
+    return dir==='desc'?-cmp:cmp;
+  });
 
-  document.getElementById('pcp-thead').innerHTML='<tr><th>Punto de Venta</th><th>Ciudad</th><th>Modelo</th>'+
-    meses.map(m=>`<th style="text-align:right">${m.slice(0,3)}</th>`).join('')+'<th style="text-align:right">Variación</th></tr>';
+  const arr=c=>PCP_SORT.col===c?(PCP_SORT.dir==='desc'?' ↓':' ↑'):'';
+  const thR=(c,lbl,right)=>`<th onclick="pcpSortBy('${c}')" style="cursor:pointer;user-select:none;position:sticky;top:0;background:#f1f5f9;z-index:2;${right?'text-align:right':''}">${lbl}${arr(c)}</th>`;
+  document.getElementById('pcp-thead').innerHTML='<tr>'+thR('pdv','Punto de Venta')+thR('ciudad','Ciudad')+thR('modelo','Modelo')+
+    meses.map(m=>thR(m,m.slice(0,3),true)).join('')+thR('prom','Promedio',true)+thR('var','Variación',true)+'</tr>';
 
-  document.getElementById('pcp-tbody').innerHTML=rows.map(row=>{
+  const bodyRows=rows.map(row=>{
     let prev=null;
     const cells=meses.map(m=>{
       const v=row.costos[m];
@@ -2400,10 +2432,21 @@ function pcpRender(){
       prev=v;
       return `<td style="text-align:right;color:${color};font-family:'DM Mono',monospace">${fmtCOP(v)}${arrow}</td>`;
     }).join('');
-    const vr=varOf(row);
+    const promCell=`<td style="text-align:right;font-weight:700;font-family:'DM Mono',monospace;background:#f8fafc">${fmtCOP(row.prom)}</td>`;
+    const vr=row.varp;
     const vrCell=vr==null?'<td style="text-align:right;color:#cbd5e1">—</td>':`<td style="text-align:right;font-weight:700;color:${vr>0.5?'#ef4444':vr<-0.5?'#10b981':'#64748b'}">${vr>0?'+':''}${vr.toFixed(1)}%</td>`;
-    return `<tr><td title="${row.pdv}">${row.pdv}</td><td>${row.ciudad}</td><td>${row.modelo}</td>${cells}${vrCell}</tr>`;
-  }).join('')||`<tr><td colspan="${meses.length+4}" style="padding:20px;color:#94a3b8">Sin datos para el filtro</td></tr>`;
+    return `<tr><td title="${row.pdv}">${row.pdv}</td><td>${row.ciudad}</td><td>${row.modelo}</td>${cells}${promCell}${vrCell}</tr>`;
+  }).join('');
+
+  // Fila inferior: promedio por mes (sobre los puntos filtrados)
+  const footAvg=meses.map(m=>{const vs=rows.map(r=>r.costos[m]).filter(v=>v!=null&&!isNaN(v));return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;});
+  const promGen=(()=>{const vs=rows.map(r=>r.prom).filter(v=>v!=null);return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;})();
+  const st='position:sticky;bottom:0;background:#e8f1f9;font-weight:800;border-top:2px solid #94a3b8';
+  const footRow=`<tr><td style="${st}">PROMEDIO POR MES</td><td style="${st}"></td><td style="${st}"></td>`+
+    footAvg.map(v=>`<td style="${st};text-align:right;font-family:'DM Mono',monospace">${fmtCOP(v)}</td>`).join('')+
+    `<td style="${st};text-align:right;font-family:'DM Mono',monospace">${fmtCOP(promGen)}</td><td style="${st}"></td></tr>`;
+
+  document.getElementById('pcp-tbody').innerHTML=(bodyRows||`<tr><td colspan="${meses.length+5}" style="padding:20px;color:#94a3b8">Sin datos para el filtro</td></tr>`)+(rows.length?footRow:'');
 
   const avgMes=meses.map(m=>{const vs=data.filter(r=>r.mes===m&&r.costo!=null).map(r=>r.costo);return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:0;});
   const servMes=meses.map(m=>{const vs=data.filter(r=>r.mes===m&&r.servicios!=null).map(r=>r.servicios);return vs.reduce((a,b)=>a+b,0);});
