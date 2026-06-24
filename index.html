@@ -346,7 +346,7 @@ thead th.sortable.desc::after{content:' ↓';opacity:1;color:var(--blue)}
     <div class="kpi" style="--ac:var(--blue);--ac-bg:var(--blue-lt)"><div class="kpi-ic">📦</div><div class="kpi-v" id="k-tot">—</div><div class="kpi-l">Total Guías</div></div>
     <div class="kpi" style="--ac:var(--green);--ac-bg:#d1fae5"><div class="kpi-ic">✅</div><div class="kpi-v" id="k-efe">—</div><div class="kpi-l">Efectivos</div></div>
     <div class="kpi" style="--ac:var(--yellow);--ac-bg:#fef9e7"><div class="kpi-ic">📈</div><div class="kpi-v" id="k-pct">—</div><div class="kpi-l">% Efectividad</div></div>
-    <div class="kpi" style="--ac:var(--purple);--ac-bg:#ede9fe"><div class="kpi-ic">⏱️</div><div class="kpi-v" id="k-pe">—</div><div class="kpi-l">Promedio PE</div><div class="kpi-sub" id="k-pe-u">días hábiles CO</div><div class="kpi-sub" id="k-pe-hrs" style="color:var(--purple);font-weight:700;font-size:11px;margin-top:1px"></div></div>
+    <div class="kpi" style="--ac:var(--purple);--ac-bg:#ede9fe"><div class="kpi-ic">⏱️</div><div class="kpi-v" id="k-pe">—</div><div class="kpi-l">Tiempo Total Ciclo</div><div class="kpi-sub" id="k-pe-u">días hábiles CO</div><div class="kpi-sub" id="k-pe-hrs" style="color:var(--purple);font-weight:700;font-size:11px;margin-top:1px"></div></div>
     <div class="kpi" style="--ac:var(--cyan);--ac-bg:#e0f7fa"><div class="kpi-ic">🚛</div><div class="kpi-v" id="k-rec">—</div><div class="kpi-l">Recursos Únicos</div></div>
     <div class="kpi" style="--ac:var(--red);--ac-bg:#fee2e2"><div class="kpi-ic">⚠️</div><div class="kpi-v" id="k-nov">—</div><div class="kpi-l">Con Novedad</div></div>
   </div>
@@ -471,12 +471,9 @@ thead th.sortable.desc::after{content:' ↓';opacity:1;color:var(--blue)}
 
   <!-- KPIs tiempos -->
   <div class="kgrid" style="margin-bottom:16px">
-    <div class="kpi" style="--ac:#8b5cf6;--ac-bg:#ede9fe"><div class="kpi-ic">📥</div><div class="kpi-v" id="tk-alist">—</div><div class="kpi-l">Prom. Alistamiento</div><div class="kpi-sub">horas</div><div id="tk-alist-hrs" style="font-size:11px;color:#8b5cf6;font-weight:700;margin-top:2px"></div></div>
-    <div class="kpi" style="--ac:#005596;--ac-bg:#e8f1f9"><div class="kpi-ic">🚚</div><div class="kpi-v" id="tk-entrega">—</div><div class="kpi-l">Prom. Entrega</div><div class="kpi-sub">horas</div><div id="tk-entrega-hrs" style="font-size:11px;color:#005596;font-weight:700;margin-top:2px"></div></div>
-    <div class="kpi" style="--ac:#10b981;--ac-bg:#d1fae5"><div class="kpi-ic">⏰</div><div class="kpi-v" id="tk-total">—</div><div class="kpi-l">Tiempo Total</div><div class="kpi-sub">horas (alist. + entrega)</div><div id="tk-total-hrs" style="font-size:11px;color:#10b981;font-weight:700;margin-top:2px"></div></div>
-    <div class="kpi" style="--ac:#f59e0b;--ac-bg:#fef3c7"><div class="kpi-ic">🏆</div><div class="kpi-v" id="tk-p50">—</div><div class="kpi-l">Mediana Entrega</div><div class="kpi-sub">P50 en horas</div></div>
-    <div class="kpi" style="--ac:#ef4444;--ac-bg:#fee2e2"><div class="kpi-ic">🔴</div><div class="kpi-v" id="tk-p90">—</div><div class="kpi-l">P90 Entrega</div><div class="kpi-sub">horas</div></div>
-    <div class="kpi" style="--ac:#06b6d4;--ac-bg:#e0f7fa"><div class="kpi-ic">📊</div><div class="kpi-v" id="tk-n">—</div><div class="kpi-l">Registros con tiempos</div><div class="kpi-sub">con datos válidos</div></div>
+    <div class="kpi" style="--ac:#8b5cf6;--ac-bg:#ede9fe"><div class="kpi-ic">📥</div><div class="kpi-v" id="tk-alist">—</div><div class="kpi-l">Prom. Alistamiento</div><div class="kpi-sub">aceptación − creación</div><div id="tk-alist-hrs" style="font-size:11px;color:#8b5cf6;font-weight:700;margin-top:2px"></div></div>
+    <div class="kpi" style="--ac:#005596;--ac-bg:#e8f1f9"><div class="kpi-ic">🚚</div><div class="kpi-v" id="tk-entrega">—</div><div class="kpi-l">Prom. Entrega</div><div class="kpi-sub">cierre − aceptación</div><div id="tk-entrega-hrs" style="font-size:11px;color:#005596;font-weight:700;margin-top:2px"></div></div>
+    <div class="kpi" style="--ac:#10b981;--ac-bg:#d1fae5"><div class="kpi-ic">⏰</div><div class="kpi-v" id="tk-total">—</div><div class="kpi-l">Tiempo Total Ciclo</div><div class="kpi-sub">cierre − creación</div><div id="tk-total-hrs" style="font-size:11px;color:#10b981;font-weight:700;margin-top:2px"></div></div>
   </div>
 
   <!-- Gráficas fila 1 -->
@@ -965,9 +962,10 @@ function detectFields(data){
   F.esp  =findFuzzy('especialidad','especialidad_servicio','esp','rama','categoria','linea');
   F.cod  =findFuzzy('cod_especialidades','cod_especialidad','codigo_especialidad','cod_esp');
   F.estado=findExact('estado','estado_guia','estado_servicio');
-  // Fechas para cálculo de días hábiles PE (col M = cierre, col K = aceptacion)
+  // Fechas para cálculo de días hábiles PE: cierre − creación
   F.fechaCierre=findExact('fecha_cierre_o_congelado','fecha_cierre','fecha_congelado');
   F.fechaAcept =findExact('fecha_aceptacion_1','fecha_aceptacion','aceptacion_1');
+  F.fechaCrea  =findExact('fecha_creacion','fecha_de_creacion','fecha_creación');
 
   // Log completo para diagnóstico
   console.log('%c══ CAMPOS DETECTADOS ══','color:#005596;font-weight:bold;font-size:13px');
@@ -1044,11 +1042,11 @@ function calcKPIs(data){
   const ef=data.filter(isEf).length;
   const nv=data.filter(isNv).length;
   const rec=new Set(data.map(r=>gv(r,F.placa)).filter(Boolean));
-  // Calcular dias habiles PE: fecha_cierre_o_congelado (M) - fecha_aceptacion_1 (K)
+  // Calcular dias habiles PE: fecha_cierre_o_congelado − fecha_creacion
   let peVals=[];
-  if(F.fechaCierre&&F.fechaAcept){
+  if(F.fechaCierre&&F.fechaCrea){
     data.forEach(r=>{
-      const d1=parseDate(gv(r,F.fechaAcept));
+      const d1=parseDate(gv(r,F.fechaCrea));
       const d2=parseDate(gv(r,F.fechaCierre));
       const dias=businessDaysCO(d1,d2);
       if(dias!==null&&dias>=0&&dias<365)peVals.push(dias);
@@ -1060,7 +1058,7 @@ function calcKPIs(data){
   }
   return{tot,ef,nv,pEf:pct(ef,tot),rec:rec.size,
     avgPE:peVals.length?peVals.reduce((a,b)=>a+b)/peVals.length:null,
-    peFromDates:!!(F.fechaCierre&&F.fechaAcept&&peVals.length)};
+    peFromDates:!!(F.fechaCierre&&F.fechaCrea&&peVals.length)};
 }
 
 // ════════════════════════════════════════════════
@@ -1931,29 +1929,50 @@ function getFechaFromRaw(raw){
   return parseDate(s);
 }
 
+// Parsea "YYYY-MM-DD HH:MM:SS" (o d/m/Y) conservando la HORA.
+function parseDateTime(s){
+  if(s===null||s===undefined)return null;
+  s=String(s).trim();
+  if(!s)return null;
+  let m=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if(m)return new Date(+m[1],+m[2]-1,+m[3],+(m[4]||0),+(m[5]||0),+(m[6]||0));
+  m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if(m)return new Date(+m[3],+m[2]-1,+m[1],+(m[4]||0),+(m[5]||0),+(m[6]||0));
+  return null;
+}
+// Horas transcurridas entre dos fechas (s1 -> s2). null si inválidas o invertidas.
+function horasEntre(s1,s2){
+  const a=parseDateTime(s1),b=parseDateTime(s2);
+  if(!a||!b||isNaN(a)||isNaN(b))return null;
+  const h=(b-a)/3600000;
+  return h<0?null:h;
+}
+
+// Tiempos calculados por DIFERENCIA DE FECHAS:
+//   Alistamiento = aceptacion_1 − creacion
+//   Entrega      = cierre − aceptacion_1
+//   Ciclo total  = cierre − creacion
 function calcTiemposRow(data){
   if(!data.length)return null;
-  const {fAlist,fEntr}=detectTimeCols(data);
-  if(!fAlist&&!fEntr)return null;
-
-  let alistVals=[],entreVals=[];
+  let alistVals=[],entreVals=[],cicloVals=[];
   data.forEach(r=>{
-    const a=parseDias(fAlist?r[fAlist]:null);
-    const e=parseDias(fEntr?r[fEntr]:null);
+    const a=horasEntre(gv(r,F.fechaCrea),  gv(r,F.fechaAcept));
+    const e=horasEntre(gv(r,F.fechaAcept), gv(r,F.fechaCierre));
+    const c=horasEntre(gv(r,F.fechaCrea),  gv(r,F.fechaCierre));
     if(a!==null)alistVals.push(a);
     if(e!==null)entreVals.push(e);
+    if(c!==null)cicloVals.push(c);
   });
-  // Quitar vacíos, ceros y outliers extremos para que los promedios sean realistas
+  // Quitar vacíos, ceros y outliers extremos (IQR)
   alistVals=limpiarOutliers(alistVals);
   entreVals=limpiarOutliers(entreVals);
-  if(!alistVals.length&&!entreVals.length)return null;
+  cicloVals=limpiarOutliers(cicloVals);
+  if(!alistVals.length&&!entreVals.length&&!cicloVals.length)return null;
   const avg=arr=>arr.length?arr.reduce((a,b)=>a+b)/arr.length:null;
-  const percentile=(arr,p)=>{if(!arr.length)return null;const s=[...arr].sort((a,b)=>a-b);return s[Math.floor((p/100)*s.length)]||s[s.length-1];};
   return{
-    nAlist:alistVals.length,nEntrega:entreVals.length,
-    avgAlist:avg(alistVals),avgEntrega:avg(entreVals),
-    p50:percentile(entreVals,50),p90:percentile(entreVals,90),
-    alistVals,entreVals,fAlist,fEntr
+    nAlist:alistVals.length,nEntrega:entreVals.length,nCiclo:cicloVals.length,
+    avgAlist:avg(alistVals),avgEntrega:avg(entreVals),avgCiclo:avg(cicloVals),
+    alistVals,entreVals,cicloVals
   };
 }
 
@@ -1999,10 +2018,10 @@ function buildTiempos(baseData){
   const data=getTiemposFiltered(baseData);
   const res=calcTiemposRow(data);
   if(!res){
-    ['tk-alist','tk-entrega','tk-total','tk-p50','tk-p90','tk-n','tk-alist-hrs','tk-entrega-hrs','tk-total-hrs'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='—';});
+    ['tk-alist','tk-entrega','tk-total','tk-alist-hrs','tk-entrega-hrs','tk-total-hrs'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='—';});
     return;
   }
-  const {avgAlist,avgEntrega,p50,p90,alistVals,entreVals,nAlist,nEntrega}=res;
+  const {avgAlist,avgEntrega,avgCiclo,alistVals,entreVals,cicloVals}=res;
 
   // KPIs — valor principal en horas, secundario en días
   const S=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
@@ -2010,12 +2029,8 @@ function buildTiempos(baseData){
   S('tk-alist-hrs',avgAlist!==null?`≈ ${hrsToDias(avgAlist)}`:'');
   S('tk-entrega',avgEntrega!==null?fmtHrs(avgEntrega):'—');
   S('tk-entrega-hrs',avgEntrega!==null?`≈ ${hrsToDias(avgEntrega)}`:'');
-  const totalAvg=(avgAlist!==null&&avgEntrega!==null)?avgAlist+avgEntrega:null;
-  S('tk-total',totalAvg!==null?fmtHrs(totalAvg):'—');
-  S('tk-total-hrs',totalAvg!==null?`≈ ${hrsToDias(totalAvg)}`:'');
-  S('tk-p50',p50!==null?fmtHrs(p50):'—');
-  S('tk-p90',p90!==null?fmtHrs(p90):'—');
-  S('tk-n',fmt(Math.max(nAlist,nEntrega)));
+  S('tk-total',avgCiclo!==null?fmtHrs(avgCiclo):'—');
+  S('tk-total-hrs',avgCiclo!==null?`≈ ${hrsToDias(avgCiclo)}`:'');
 
   const avgArr=arr=>arr.length?arr.reduce((a,b)=>a+b)/arr.length:0;
 
@@ -2027,16 +2042,16 @@ function buildTiempos(baseData){
     if(!d)return;
     const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     if(!mesGroup[k])mesGroup[k]={a:[],e:[]};
-    const a=parseDias(fAlist?r[fAlist]:null);
-    const e=parseDias(fEntr?r[fEntr]:null);
+    const a=horasEntre(gv(r,F.fechaCrea),gv(r,F.fechaAcept));
+    const e=horasEntre(gv(r,F.fechaAcept),gv(r,F.fechaCierre));
     if(a!==null)mesGroup[k].a.push(a);
     if(e!==null)mesGroup[k].e.push(e);
   });
   const mesKeys=Object.keys(mesGroup).sort();
   if(document.getElementById('ch-ti-mes')&&mesKeys.length){
     mkBarVPaged('ch-ti-mes','ti-mes',mesKeys,
-      [{label:'Alistamiento (horas)',data:mesKeys.map(k=>+avgArr(mesGroup[k].a).toFixed(1)),backgroundColor:'rgba(139,92,246,.8)',borderRadius:4,stack:'s',maxBarThickness:40},
-       {label:'Entrega (horas)',data:mesKeys.map(k=>+avgArr(mesGroup[k].e).toFixed(1)),backgroundColor:'rgba(0,85,150,.8)',borderRadius:4,stack:'s',maxBarThickness:40}],
+      [{label:'Alistamiento (horas)',data:mesKeys.map(k=>+avgArr(limpiarOutliers(mesGroup[k].a)).toFixed(1)),backgroundColor:'rgba(139,92,246,.8)',borderRadius:4,stack:'s',maxBarThickness:40},
+       {label:'Entrega (horas)',data:mesKeys.map(k=>+avgArr(limpiarOutliers(mesGroup[k].e)).toFixed(1)),backgroundColor:'rgba(0,85,150,.8)',borderRadius:4,stack:'s',maxBarThickness:40}],
       {plugins:{legend:{position:'top',labels:{font:{family:'DM Sans',size:11},boxWidth:10}},
         tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmtHrs(c.raw)} (${hrsToDias(c.raw)})`}}},
         scales:{x:{ticks:{font:{family:'DM Sans',size:10}},grid:{display:false},stacked:true},
@@ -2064,8 +2079,8 @@ function buildTiempos(baseData){
   data.forEach(r=>{
     const city=getCiu(r);if(city==='SIN CIUDAD')return;
     if(!cityAlist[city])cityAlist[city]=[];if(!cityEntr[city])cityEntr[city]=[];
-    const a=parseDias(fAlist?r[fAlist]:null);
-    const e=parseDias(fEntr?r[fEntr]:null);
+    const a=horasEntre(gv(r,F.fechaCrea),gv(r,F.fechaAcept));
+    const e=horasEntre(gv(r,F.fechaAcept),gv(r,F.fechaCierre));
     if(a!==null)cityAlist[city].push(a);
     if(e!==null)cityEntr[city].push(e);
   });
@@ -2104,8 +2119,8 @@ function buildTiempos(baseData){
   data.forEach(r=>{
     const t=getTipo(r);if(t==='SIN TIPO')return;
     if(!tipoAlist[t])tipoAlist[t]=[];if(!tipoEntr[t])tipoEntr[t]=[];
-    const a=parseDias(fAlist?r[fAlist]:null);
-    const e=parseDias(fEntr?r[fEntr]:null);
+    const a=horasEntre(gv(r,F.fechaCrea),gv(r,F.fechaAcept));
+    const e=horasEntre(gv(r,F.fechaAcept),gv(r,F.fechaCierre));
     if(a!==null)tipoAlist[t].push(a);
     if(e!==null)tipoEntr[t].push(e);
   });
@@ -2130,8 +2145,8 @@ function buildTiempos(baseData){
   const ogAlist={NC:[],CROSS:[]},ogEntr={NC:[],CROSS:[]};
   data.forEach(r=>{
     const og=r._o==='NC'?'NC':'CROSS';
-    const a=parseDias(fAlist?r[fAlist]:null);
-    const e=parseDias(fEntr?r[fEntr]:null);
+    const a=horasEntre(gv(r,F.fechaCrea),gv(r,F.fechaAcept));
+    const e=horasEntre(gv(r,F.fechaAcept),gv(r,F.fechaCierre));
     if(a!==null)ogAlist[og].push(a);
     if(e!==null)ogEntr[og].push(e);
   });
