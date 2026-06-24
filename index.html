@@ -1879,6 +1879,21 @@ function parseDias(raw){
   return v*24; // días → horas
 }
 
+// Limpia un arreglo de tiempos para promedios realistas:
+//  - quita nulos, NaN y ceros (servicios sin tiempo registrado)
+//  - quita outliers extremos por el método IQR (rango intercuartílico)
+// Devuelve solo los valores "sanos".
+function limpiarOutliers(arr){
+  let v=arr.filter(x=>x!==null&&x!==undefined&&!isNaN(x)&&x>0);
+  if(v.length<4)return v; // muy pocos datos: no tiene sentido recortar
+  const s=[...v].sort((a,b)=>a-b);
+  const q=p=>{const i=(p/100)*(s.length-1);const lo=Math.floor(i),hi=Math.ceil(i);return s[lo]+(s[hi]-s[lo])*(i-lo);};
+  const q1=q(25), q3=q(75), iqr=q3-q1;
+  const limSup=q3+1.5*iqr;            // techo: descarta los "números locos" por arriba
+  const limInf=Math.max(0,q1-1.5*iqr);// piso (rara vez aplica porque ya quitamos ceros)
+  return v.filter(x=>x>=limInf&&x<=limSup);
+}
+
 // Obtiene fecha desde valor raw (serial excel o string)
 function getFechaFromRaw(raw){
   if(!raw)return null;
@@ -1899,13 +1914,16 @@ function calcTiemposRow(data){
   const {fAlist,fEntr}=detectTimeCols(data);
   if(!fAlist&&!fEntr)return null;
 
-  const alistVals=[],entreVals=[];
+  let alistVals=[],entreVals=[];
   data.forEach(r=>{
     const a=parseDias(fAlist?r[fAlist]:null);
     const e=parseDias(fEntr?r[fEntr]:null);
     if(a!==null)alistVals.push(a);
     if(e!==null)entreVals.push(e);
   });
+  // Quitar vacíos, ceros y outliers extremos para que los promedios sean realistas
+  alistVals=limpiarOutliers(alistVals);
+  entreVals=limpiarOutliers(entreVals);
   if(!alistVals.length&&!entreVals.length)return null;
   const avg=arr=>arr.length?arr.reduce((a,b)=>a+b)/arr.length:null;
   const percentile=(arr,p)=>{if(!arr.length)return null;const s=[...arr].sort((a,b)=>a-b);return s[Math.floor((p/100)*s.length)]||s[s.length-1];};
@@ -2029,8 +2047,8 @@ function buildTiempos(baseData){
     if(a!==null)cityAlist[city].push(a);
     if(e!==null)cityEntr[city].push(e);
   });
-  const sortedAlist=Object.entries(cityAlist).filter(([,v])=>v.length>=3).map(([c,v])=>[c,avgArr(v)]).sort((a,b)=>BSORTV['alist-ciu']==='desc'?b[1]-a[1]:a[1]-b[1]);
-  const sortedEntr=Object.entries(cityEntr).filter(([,v])=>v.length>=3).map(([c,v])=>[c,avgArr(v)]).sort((a,b)=>BSORTV['entr-ciu']==='desc'?b[1]-a[1]:a[1]-b[1]);
+  const sortedAlist=Object.entries(cityAlist).map(([c,v])=>[c,limpiarOutliers(v)]).filter(([,v])=>v.length>=3).map(([c,v])=>[c,avgArr(v)]).sort((a,b)=>BSORTV['alist-ciu']==='desc'?b[1]-a[1]:a[1]-b[1]);
+  const sortedEntr=Object.entries(cityEntr).map(([c,v])=>[c,limpiarOutliers(v)]).filter(([,v])=>v.length>=3).map(([c,v])=>[c,avgArr(v)]).sort((a,b)=>BSORTV['entr-ciu']==='desc'?b[1]-a[1]:a[1]-b[1]);
   const topAlistCiu=sortedAlist; // keep all
   const topEntrCiu=sortedEntr;
 
@@ -2069,6 +2087,9 @@ function buildTiempos(baseData){
     if(a!==null)tipoAlist[t].push(a);
     if(e!==null)tipoEntr[t].push(e);
   });
+  // Limpiar outliers por tipo
+  Object.keys(tipoAlist).forEach(t=>tipoAlist[t]=limpiarOutliers(tipoAlist[t]));
+  Object.keys(tipoEntr).forEach(t=>tipoEntr[t]=limpiarOutliers(tipoEntr[t]));
   const tiposSorted=Object.keys(tipoAlist).filter(t=>tipoAlist[t].length>=3).sort((a,b)=>BSORTV['ti-tipo']==='desc'?avgArr(tipoAlist[b])-avgArr(tipoAlist[a]):avgArr(tipoAlist[a])-avgArr(tipoAlist[b]));
   if(tiposSorted.length){
     mkBarVScroll('ch-ti-tipo',
@@ -2092,6 +2113,7 @@ function buildTiempos(baseData){
     if(a!==null)ogAlist[og].push(a);
     if(e!==null)ogEntr[og].push(e);
   });
+  ['NC','CROSS'].forEach(k=>{ogAlist[k]=limpiarOutliers(ogAlist[k]);ogEntr[k]=limpiarOutliers(ogEntr[k]);});
   dc('ch-ti-og');const ctxOG=document.getElementById('ch-ti-og');if(ctxOG){
     CHS['ch-ti-og']=new Chart(ctxOG.getContext('2d'),{
       type:'bar',
@@ -2330,19 +2352,60 @@ function showError(){
   </div>`;
 }
 
+// ── Caché local (IndexedDB) para carga/recarga instantánea ──
+const IDB_DB='bi_colsubsidio_v1', IDB_STORE='cache';
+function idbOpen(){return new Promise((res,rej)=>{const r=indexedDB.open(IDB_DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(IDB_STORE);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+async function idbGet(k){try{const db=await idbOpen();return await new Promise((res,rej)=>{const q=db.transaction(IDB_STORE).objectStore(IDB_STORE).get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});}catch(e){return null;}}
+async function idbSet(k,v){try{const db=await idbOpen();return await new Promise((res,rej)=>{const q=db.transaction(IDB_STORE,'readwrite').objectStore(IDB_STORE).put(v,k);q.onsuccess=()=>res(true);q.onerror=()=>rej(q.error);});}catch(e){return false;}}
+
+function renderFromData(reason){
+  const all=[...RNC,...RCR];
+  if(!all.length)return Promise.resolve();
+  detectFields(all);
+  const ld=getLastDate(all);
+  if(ld)document.getElementById('hdr-last').textContent=ld.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});
+  populateFilters(all);
+  return update(reason);
+}
+
+// Guarda los datos en caché (como JSON para clonado rápido)
+function guardarCache(){
+  try{ idbSet('rows_DATA_NC', JSON.stringify(RNC)); idbSet('rows_DATA_CROSS', JSON.stringify(RCR)); }catch(e){}
+}
+
 async function loadData(isRefresh=false){
-  if(!isRefresh){setP(5);setSub('Cargando datos desde BigQuery…');}
+  if(!isRefresh){setP(5);setSub('Cargando datos…');}
+
+  // ── CACHÉ: pintar al instante si hay datos guardados ──
+  let fromCache=false, crossFresh=false;
+  if(!isRefresh){
+    try{
+      const sNC=await idbGet('rows_DATA_NC'), sCR=await idbGet('rows_DATA_CROSS');
+      if(sNC){
+        RNC=JSON.parse(sNC); RCR=sCR?JSON.parse(sCR):[];
+        if(RNC.length){
+          setSub('Mostrando datos en caché…');
+          await renderFromData('caché');
+          document.getElementById('loader').style.display='none';
+          fromCache=true;
+        }
+      }
+    }catch(e){console.warn('Caché no disponible:',e);}
+  }
 
   // ── FASE 1: cargar NC y mostrar dashboard de inmediato ──────────────
-  setSub('Cargando hoja DATA NC…');
+  if(!fromCache) setSub('Cargando hoja DATA NC…');
   RNC=await tryFetch(BQ_TABLE_NC,'DATA NC');
   setP(55);
   console.log(`NC: ${RNC.length} filas`);
 
   if(!RNC.length){
+    // Si ya mostramos algo desde caché, no romper la vista por un refresco fallido
+    if(fromCache){console.warn('Refresco NC vacío — se mantienen los datos en caché');return;}
     // Si NC falla, intentar igual con CROSS antes de mostrar error
     setSub('NC sin datos, cargando CROSS…');
     RCR=await tryFetch(BQ_TABLE_CROSS,'CROSS');
+    crossFresh=true;
     if(!RCR.length){showError();return;}
   }
 
@@ -2369,8 +2432,8 @@ async function loadData(isRefresh=false){
   // Pequeño delay para no bloquear el render inicial
   setTimeout(async()=>{
     try{
-      if(!RCR.length){
-        // Solo buscar CROSS si no lo cargamos ya arriba
+      if(!crossFresh){
+        // Traer CROSS fresco (aunque ya tengamos una versión de caché, para refrescar)
         RCR=await tryFetch(BQ_TABLE_CROSS,'CROSS');
       }
       console.log(`CROSS: ${RCR.length} filas`);
@@ -2398,6 +2461,7 @@ async function loadData(isRefresh=false){
       populateFilters(all);
       await update('NC + CROSS');
       showCrossBanner(`✅ CROSS cargado — ${RCR.length.toLocaleString('es-CO')} registros añadidos`,'#10b981',3000);
+      guardarCache(); // refrescar caché para la próxima carga instantánea
     }catch(err){
       hideCrossLoadingBanner();
       showCrossBanner('⚠️ Error cargando CROSS — datos NC disponibles','#ef4444',5000);
@@ -2451,6 +2515,7 @@ async function retryManual(){
     const ld2=getLastDate(all);if(ld2)document.getElementById('hdr-last').textContent=ld2.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});
     await update('NC + CROSS');
     showCrossBanner(`✅ CROSS cargado — ${RCR.length.toLocaleString('es-CO')} registros añadidos`,'#10b981',3000);
+    guardarCache();
   },100);
 }
 
