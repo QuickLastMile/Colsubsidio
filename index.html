@@ -1089,17 +1089,22 @@ function calcKPIs(data){
 // PROYECCION — promedio móvil ponderado + corrección mes parcial
 // ════════════════════════════════════════════════
 
-// Detecta si un key YYYY-MM es el mes en curso (datos incompletos)
+// Referencia: último día CON DATOS (no la fecha de hoy). Se setea en buildTrend.
+let LAST_DATA_DATE=null;
+function daysInMonthOf(d){return new Date(d.getFullYear(),d.getMonth()+1,0).getDate();}
+
+// Detecta si un key YYYY-MM es un mes PARCIAL = el mes del último dato que aún no llega
+// al fin de mes. Así proyectamos desde el último día con datos, no desde hoy.
 function isCurrentMonth(key){
-  const now=new Date();
-  return key===`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  if(!LAST_DATA_DATE)return false;
+  const mk=`${LAST_DATA_DATE.getFullYear()}-${String(LAST_DATA_DATE.getMonth()+1).padStart(2,'0')}`;
+  return key===mk && LAST_DATA_DATE.getDate() < daysInMonthOf(LAST_DATA_DATE);
 }
 
-// Fracción del mes actual que ha transcurrido (días hábiles estimados)
+// Fracción del mes cubierta por los DATOS (último día con datos / días del mes)
 function monthFraction(){
-  const now=new Date();
-  const total=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
-  return Math.max(0.05,now.getDate()/total);
+  if(!LAST_DATA_DATE)return 1;
+  return Math.max(0.05, LAST_DATA_DATE.getDate()/daysInMonthOf(LAST_DATA_DATE));
 }
 
 // Meses futuros desde lastKey hasta dic del año en curso
@@ -1458,6 +1463,7 @@ function mkBarV(id,labels,datasets){
 // BUILD GENERAL
 // ════════════════════════════════════════════════
 function buildTrend(data){
+  LAST_DATA_DATE=getLastDate(data); // último día con datos: base de la proyección del mes en curso
   const g={};
   data.forEach(r=>{const d=getFecha(r);if(!d)return;const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;if(!g[k])g[k]={t:0,e:0};g[k].t++;if(isEf(r))g[k].e++;});
   const keys=Object.keys(g).sort();if(!keys.length)return;
@@ -1567,11 +1573,10 @@ function buildTrend(data){
   const info=document.getElementById('ch-trend-info');
   if(info){
     const yr=new Date().getFullYear();
-    const nowDay=new Date().getDate();
-    const daysInMo=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate();
-    const pctMes=Math.round(nowDay/daysInMo*100);
+    const pctMes=Math.round(monthFraction()*100);
+    const ultDia=LAST_DATA_DATE?LAST_DATA_DATE.toLocaleDateString('es-CO',{day:'2-digit',month:'short'}):'—';
     const partialNote=hasPartial
-      ?`<span style="color:#f59e0b;font-size:10px;font-weight:700;margin-left:10px">⚠ Mes en curso: ${pctMes}% del mes transcurrido — excluido del modelo de proyección</span>`
+      ?`<span style="color:#f59e0b;font-size:10px;font-weight:700;margin-left:10px">⚠ Mes en curso (${lastRealKey}): datos hasta el <b>${ultDia}</b> (${pctMes}% del mes) — se proyecta hasta el cierre</span>`
       :'';
     info.innerHTML=`<span style="color:#005596;font-size:10px;font-weight:700">▏Base proyección: meses cerrados hasta <b>${keys[splitIdx]}</b></span>${partialNote}
     <span style="color:#94a3b8;font-size:10px;margin-left:10px">🔮 Proyección hasta dic ${yr} · regresión ponderada (meses recientes ×6)</span>`;
@@ -2841,8 +2846,8 @@ function mselRenderList(id, query){
   list.innerHTML=filtered.map(it=>{
     const sel=m.selected.has(it.val);
     const codHtml=it.cod?`<span class="msel-cod">${it.cod}</span>`:'';
-    return `<label class="msel-item${sel?' selected':''}" onclick="event.preventDefault();mselToggleItem('${id}','${it.val.replace(/'/g,"\'")}',this)">
-      <input type="checkbox" ${sel?'checked':''} onclick="event.stopPropagation()"/>
+    return `<label class="msel-item${sel?' selected':''}" onclick="event.preventDefault();mselToggleItem('${id}','${it.val.replace(/'/g,"\\'")}',this)">
+      <input type="checkbox" ${sel?'checked':''} style="pointer-events:none"/>
       <span>${it.label}</span>${codHtml}
     </label>`;
   }).join('');
