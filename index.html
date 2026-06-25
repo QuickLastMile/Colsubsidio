@@ -1018,12 +1018,15 @@ function detectFields(data){
 
 }
 
-const getCiu=r=>N(gv(r,F.ciu))||'SIN CIUDAD';
-const getNov=r=>N(gv(r,F.nov))||'SIN NOVEDAD';
-const getTipo=r=>N(gv(r,F.tipo))||'SIN TIPO';
-const getCanal=r=>N(gv(r,F.canal))||'SIN CANAL';
-const getCanalG=r=>N(gv(r,F.canalg))||'SIN CANAL';
-const getEsp=r=>N(gv(r,F.esp))||'SIN ESPECIALIDAD';
+// Sentinelas de "sin dato" — se tratan como vacío (no aparecen como opción ni filtran)
+const NODATA=new Set(['','#N/D','N/D','ND','#N/A','N/A','NA','NULL','NONE','SIN DATO','SIN DATOS','-','--','#REF!','#VALUE!']);
+const cleanVal=v=>{const n=N(v);return NODATA.has(n)?'':n;};
+const getCiu=r=>cleanVal(gv(r,F.ciu))||'SIN CIUDAD';
+const getNov=r=>cleanVal(gv(r,F.nov))||'SIN NOVEDAD';
+const getTipo=r=>cleanVal(gv(r,F.tipo))||'SIN TIPO';
+const getCanal=r=>cleanVal(gv(r,F.canal))||'SIN CANAL';
+const getCanalG=r=>cleanVal(gv(r,F.canalg))||'SIN CANAL';
+const getEsp=r=>cleanVal(gv(r,F.esp))||'SIN ESPECIALIDAD';
 
 // Efectivo: SIN NOVEDAD o ENTREGADO PREVIAMENTE
 const isEf=r=>{const v=getNov(r);return v===''||v==='SIN NOVEDAD'||v==='ENTREGADO PREVIAMENTE';};
@@ -2569,12 +2572,60 @@ async function renderRest(data,seq,active){
   RENDER_QUEUE_BUSY=false;
 }
 
+// ════════════════════════════════════════════════
+// FILTROS EN CASCADA — cada filtro solo muestra opciones que existen
+// según los demás filtros activos (cross-filtering)
+// ════════════════════════════════════════════════
+let ESP_CODMAP={};
+function rebuildSel(id,set,sentinel,allLabel,cur){
+  const el=document.getElementById(id); if(!el)return;
+  let vals=[...set].filter(v=>v&&(!sentinel||v!==sentinel)).sort();
+  if(cur&&!vals.includes(cur))vals.unshift(cur); // mantener la selección actual aunque quede sin coincidencias
+  el.innerHTML='<option value="">'+allLabel+'</option>'+vals.map(v=>'<option value="'+String(v).replace(/"/g,'&quot;')+'">'+v+'</option>').join('');
+  el.value=cur||'';
+}
+function refreshFilterOptions(){
+  if(!RNC.length&&!RCR.length)return;
+  // Precalcular los valores de cada fila una sola vez
+  const rv=[];
+  const push=arr=>arr.forEach(r=>rv.push({
+    ciu:getCiu(r),tipo:getTipo(r),nov:getNov(r),canal:getCanal(r),canalg:getCanalG(r),
+    esp:getEsp(r),fecha:getFecha(r),cod:(F.cod?(gv(r,F.cod)||'').toString().trim():'')
+  }));
+  if(ST.nc)push(RNC); if(ST.cross)push(RCR);
+  const passExcept=(o,f)=>{
+    if(f!=='ciu'&&ST.ciudad&&o.ciu!==ST.ciudad)return false;
+    if(f!=='tipo'&&ST.tipo&&o.tipo!==ST.tipo)return false;
+    if(f!=='nov'&&ST.nov&&o.nov!==ST.nov)return false;
+    if(f!=='canal'&&ST.canal&&o.canal!==ST.canal)return false;
+    if(f!=='canalg'&&ST.canalg&&o.canalg!==ST.canalg)return false;
+    if(f!=='esp'&&ST.esp.size&&!ST.esp.has(o.esp))return false;
+    if((ST.fechaInicio||ST.fechaFin)&&!isDateInRange(o.fecha,ST.fechaInicio,ST.fechaFin))return false;
+    return true;
+  };
+  const optSet=f=>{const s=new Set();rv.forEach(o=>{if(passExcept(o,f))s.add(o[f]);});return s;};
+  rebuildSel('f-ciudad',optSet('ciu'),'SIN CIUDAD','Todas las ciudades',ST.ciudad);
+  rebuildSel('f-tipo',optSet('tipo'),'SIN TIPO','Todos',ST.tipo);
+  rebuildSel('f-nov',optSet('nov'),null,'Todas las novedades',ST.nov);
+  rebuildSel('f-canal',optSet('canal'),'SIN CANAL','Todos',ST.canal);
+  rebuildSel('f-canalg',optSet('canalg'),'SIN CANAL','Todos',ST.canalg);
+  // Punto de Venta (multiselect): reconstruir con los valores disponibles
+  const espSet=optSet('esp'); espSet.delete('SIN ESPECIALIDAD');
+  rv.forEach(o=>{if(o.esp&&o.esp!=='SIN ESPECIALIDAD'&&!ESP_CODMAP[o.esp]&&o.cod)ESP_CODMAP[o.esp]=o.cod;});
+  if(typeof mselBuildItems==='function'){
+    mselBuildItems('esp',[...espSet].sort(),ESP_CODMAP,ST.esp);
+    const sv=document.getElementById('msel-search-esp'); // preservar búsqueda en curso
+    if(sv&&sv.value)mselRenderList('esp',sv.value);
+  }
+}
+
 async function update(reason='actualización'){
   const seq=++UPD_SEQ;
   startWatchdog();
   setWorkStatus('Aplicando '+reason+'…',8,'Primero se muestra la pestaña actual; el resto carga después');
   const data=getFiltered();
   LAST_DATA=data;
+  try{refreshFilterOptions();}catch(e){console.warn('refreshFilterOptions:',e);}
   updateKPIsOnly(data);
 
   const active=getActiveTab();
