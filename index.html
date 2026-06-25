@@ -282,11 +282,11 @@ thead th.sortable.desc::after{content:' ↓';opacity:1;color:var(--blue)}
   <select class="fsel" id="f-tipo"><option value="">Todos</option></select>
   <span class="fl">Novedad</span>
   <select class="fsel" id="f-nov"><option value="">Todas</option></select>
-  <span class="fl">Convenio</span>
+  <span class="fl">Punto de Venta</span>
   <div class="msel-wrap" id="msel-wrap-esp">
-    <div class="msel-trigger" id="msel-trigger-esp" tabindex="0">Todos los convenios</div>
+    <div class="msel-trigger" id="msel-trigger-esp" tabindex="0">Todos los puntos</div>
     <div class="msel-dropdown" id="msel-drop-esp">
-      <div class="msel-search"><input type="text" id="msel-search-esp" placeholder="Buscar convenio o código…" autocomplete="off"/></div>
+      <div class="msel-search"><input type="text" id="msel-search-esp" placeholder="Buscar punto de venta o código…" autocomplete="off"/></div>
       <div class="msel-actions">
         <button class="msel-act-btn" onclick="mselSelectAll('esp')">✓ Todos</button>
         <button class="msel-act-btn" onclick="mselClearAll('esp')">✕ Ninguno</button>
@@ -294,6 +294,8 @@ thead th.sortable.desc::after{content:' ↓';opacity:1;color:var(--blue)}
       <div class="msel-list" id="msel-list-esp"></div>
     </div>
   </div>
+  <span class="fl">Canal</span>
+  <select class="fsel" id="f-canalg"><option value="">Todos</option></select>
   <span class="fl">Tipo Canal</span>
   <select class="fsel" id="f-canal"><option value="">Todos</option></select>
   <span class="fl">Fecha Entrega</span>
@@ -368,6 +370,12 @@ thead th.sortable.desc::after{content:' ↓';opacity:1;color:var(--blue)}
     <div class="card"><div class="card-hdr"><div class="card-hdr-txt"><div class="ct">Efectividad por Tipo de Servicio</div><div class="cs">% efectividad y volumen por tipo de servicio</div></div><button class="sort-btn" id="sb-tipoefe" onclick="toggleSort('tipoefe')">↓ Mayor → Menor</button></div><canvas id="ch-tipo-efe"></canvas></div>
   </div>
 
+  <!-- NUEVO: Canal (tipo_de_servicio_g) -->
+  <div class="card">
+    <div class="card-hdr"><div class="card-hdr-txt"><div class="ct">Servicios por Canal</div><div class="cs">Volumen por canal (Comercial / Institucional / IPS) · clic en una barra para filtrar todo</div></div><button class="sort-btn" id="sb-canalg" onclick="toggleSort('canalg')">↓ Mayor → Menor</button></div>
+    <canvas id="ch-canalg-vol"></canvas>
+  </div>
+
   <!-- NUEVO: Tipo Canal -->
   <div class="card">
     <div class="card-hdr"><div class="card-hdr-txt"><div class="ct">Servicios por Tipo de Canal</div><div class="cs">Volumen por tipo de canal · clic en una barra para filtrar todo</div></div><button class="sort-btn" id="sb-canal" onclick="toggleSort('canal')">↓ Mayor → Menor</button></div>
@@ -413,7 +421,7 @@ thead th.sortable.desc::after{content:' ↓';opacity:1;color:var(--blue)}
   <!-- NUEVO: Por Especialidad -->
   <div class="ceq">
     <div class="card"><div class="ct">Novedades por Especialidad</div><div class="cs">Distribución de novedades según campo especialidad</div><div class="barv-wrap"><canvas id="ch-nov-esp" style="width:100%;display:block"></canvas><div class="barv-nav" id="nav-nov-esp" style="display:none"><button onclick="barvPan('nov-esp',-1)">◀</button><input type="range" id="rng-nov-esp" min="0" value="0" oninput="barvSeek('nov-esp',+this.value)"><button onclick="barvPan('nov-esp',1)">▶</button><span id="lbl-nov-esp"></span></div></div></div>
-    <div class="card"><div class="card-hdr"><div class="card-hdr-txt"><div class="ct">Efectividad por Especialidad / Convenio</div><div class="cs">% efectividad vs % novedad por especialidad</div></div><button class="sort-btn" id="sb-espefe" onclick="toggleSort('espefe')">↓ Mayor → Menor</button></div><canvas id="ch-esp-efe"></canvas></div>
+    <div class="card"><div class="card-hdr"><div class="card-hdr-txt"><div class="ct">Efectividad por Punto de Venta</div><div class="cs">% efectividad vs % novedad por especialidad</div></div><button class="sort-btn" id="sb-espefe" onclick="toggleSort('espefe')">↓ Mayor → Menor</button></div><canvas id="ch-esp-efe"></canvas></div>
   </div>
 
   <!-- NUEVO: Tabla por Tipo de Servicio en Novedades -->
@@ -455,11 +463,12 @@ thead th.sortable.desc::after{content:' ↓';opacity:1;color:var(--blue)}
       <span class="range-help">Vacío = todos</span>
     </div>
     <select id="tf-origen" class="fsel" style="font-size:12px"><option value="">NC + CROSS</option><option value="NC">Solo NC</option><option value="CROSS">Solo CROSS</option></select>
+    <select id="tf-canalg" class="fsel" style="font-size:12px"><option value="">Todos los canales (serv.)</option></select>
     <select id="tf-canal" class="fsel" style="font-size:12px"><option value="">Todos los canales</option></select>
     <div class="msel-wrap" id="msel-wrap-tfesp">
-      <div class="msel-trigger" id="msel-trigger-tfesp" tabindex="0">Todos los convenios</div>
+      <div class="msel-trigger" id="msel-trigger-tfesp" tabindex="0">Todos los puntos</div>
       <div class="msel-dropdown" id="msel-drop-tfesp">
-        <div class="msel-search"><input type="text" id="msel-search-tfesp" placeholder="Buscar convenio o código…" autocomplete="off"/></div>
+        <div class="msel-search"><input type="text" id="msel-search-tfesp" placeholder="Buscar punto de venta o código…" autocomplete="off"/></div>
         <div class="msel-actions">
           <button class="msel-act-btn" onclick="mselSelectAll('tfesp')">✓ Todos</button>
           <button class="msel-act-btn" onclick="mselClearAll('tfesp')">✕ Ninguno</button>
@@ -565,7 +574,8 @@ thead th.sortable.desc::after{content:' ↓';opacity:1;color:var(--blue)}
     <div style="font-size:12px;font-weight:700;color:var(--blue)">FILTRAR:</div>
     <select id="pcp-ciudad" class="fsel" style="font-size:12px"><option value="">Todas las ciudades</option></select>
     <select id="pcp-modelo" class="fsel" style="font-size:12px"><option value="">Todos los modelos</option></select>
-    <input type="text" id="pcp-srch" class="fin" placeholder="🔍 Buscar punto de venta…" style="width:240px;font-size:12px"/>
+    <div id="pcp-meses" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center"></div>
+    <input type="text" id="pcp-srch" class="fin" placeholder="🔍 Buscar por punto de venta o código (CECO)…" style="width:240px;font-size:12px"/>
     <div style="margin-left:auto;font-size:11px;color:var(--muted)" id="pcp-info">—</div>
   </div>
 
@@ -640,7 +650,7 @@ async function fetchTable(tabla,label=''){
 let RNC=[],RCR=[],F={};
 let CHS={},MI=null,ML=[];
 let DD=[],DP=1; const PG=25;
-let ST={nc:true,cross:true,ciudad:'',tipo:'',nov:'',canal:'',esp:new Set(),fechaInicio:'',fechaFin:'',srch:''};
+let ST={nc:true,cross:true,ciudad:'',tipo:'',nov:'',canal:'',canalg:'',esp:new Set(),fechaInicio:'',fechaFin:'',srch:''};
 
 // Render progresivo: evita que el navegador se quede congelado dibujando todas las pestañas a la vez.
 let UPD_SEQ=0, LAST_DATA=[], RENDER_QUEUE_BUSY=false, LAST_STAGE_AT=Date.now(), WATCHDOG=null;
@@ -983,6 +993,7 @@ function detectFields(data){
   F.pe   =findExact('pe','tiempo_pe','dias_pe','promedio_pe');
   F.tipo =findFuzzy('tipo_servicio','tipo_de_servicio','tipo','servicio','modalidad','tipo_guia');
   F.canal=findExact('tipo_canal','tipocanal','canal');
+  F.canalg=findExact('tipo_de_servicio_g','tipo_servicio_g','tipodeserviciog');
   F.esp  =findFuzzy('especialidad','especialidad_servicio','esp','rama','categoria','linea');
   F.cod  =findFuzzy('cod_especialidades','cod_especialidad','codigo_especialidad','cod_esp');
   F.estado=findExact('estado','estado_guia','estado_servicio');
@@ -1011,6 +1022,7 @@ const getCiu=r=>N(gv(r,F.ciu))||'SIN CIUDAD';
 const getNov=r=>N(gv(r,F.nov))||'SIN NOVEDAD';
 const getTipo=r=>N(gv(r,F.tipo))||'SIN TIPO';
 const getCanal=r=>N(gv(r,F.canal))||'SIN CANAL';
+const getCanalG=r=>N(gv(r,F.canalg))||'SIN CANAL';
 const getEsp=r=>N(gv(r,F.esp))||'SIN ESPECIALIDAD';
 
 // Efectivo: SIN NOVEDAD o ENTREGADO PREVIAMENTE
@@ -1051,6 +1063,7 @@ function getFiltered(){
   if(ST.tipo)   d=d.filter(r=>getTipo(r)===ST.tipo);
   if(ST.nov)    d=d.filter(r=>getNov(r)===ST.nov);
   if(ST.canal)  d=d.filter(r=>getCanal(r)===ST.canal);
+  if(ST.canalg) d=d.filter(r=>getCanalG(r)===ST.canalg);
   if(ST.esp.size)d=d.filter(r=>ST.esp.has(getEsp(r)));
   if(ST.fechaInicio||ST.fechaFin){
     d=d.filter(r=>{
@@ -1235,6 +1248,7 @@ function toggleSort(key){
   else if(key==='tipoefe')buildTipoEfe(d);
   else if(key==='espefe')buildNovedades(d);
   else if(key==='canal')buildCanalVol(d);
+  else if(key==='canalg')buildCanalGVol(d);
 }
 
 // Generic paginated vertical bar — shared with all vertical charts
@@ -1370,7 +1384,7 @@ function toggleSortV(key){
 function chartFilterClick(type,value){
   if(value===undefined||value===null||value==='')return;
   ST[type] = (ST[type]===value) ? '' : value;
-  const selId = type==='ciudad'?'f-ciudad':type==='tipo'?'f-tipo':type==='nov'?'f-nov':type==='canal'?'f-canal':null;
+  const selId = type==='ciudad'?'f-ciudad':type==='tipo'?'f-tipo':type==='nov'?'f-nov':type==='canal'?'f-canal':type==='canalg'?'f-canalg':null;
   if(selId){const el=document.getElementById(selId); if(el) el.value=ST[type]||'';}
   update();
 }
@@ -1476,7 +1490,7 @@ function buildTrend(data){
 
   // Índice donde empieza la proyección: desde el último mes CERRADO
   // Si hay mes parcial, la proyección arranca desde el penúltimo (último cerrado)
-  const splitIdx=hasPartial?keys.length-2:keys.length-1;
+  const splitIdx=Math.max(0, hasPartial?keys.length-2:keys.length-1); // evita Array(-1) con 1 solo mes
   const baseEf=pcts[splitIdx];
   const baseTot=tots[splitIdx];
 
@@ -1610,6 +1624,14 @@ function buildTipoVol(data){
   const c={};data.forEach(r=>{const t=getTipo(r);c[t]=(c[t]||0)+1;});
   const sorted=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,10);if(!sorted.length)return;
   mkDonut('ch-tipo-vol',sorted.map(x=>abreviar(x[0]).slice(0,22)),sorted.map(x=>x[1]),P12.slice(0,sorted.length),sorted.map(x=>x[0]),'tipo');
+}
+
+// Servicios por Canal (tipo_de_servicio_g)
+function buildCanalGVol(data){
+  const c={};data.forEach(r=>{const x=getCanalG(r);if(x!=='SIN CANAL')c[x]=(c[x]||0)+1;});
+  let top=Object.entries(c).sort((a,b)=>BSORT.canalg==='desc'?b[1]-a[1]:a[1]-b[1]);
+  if(!top.length){mkEmpty('ch-canalg-vol','Sin datos de canal');return;}
+  mkBarH('ch-canalg-vol',top.map(x=>x[0].slice(0,30)),top.map(x=>x[1]),top.map(()=>'#0891b2'),false,null,top.map(x=>x[0]),'canalg');
 }
 
 // Servicios por Tipo de Canal — barras horizontales clicables (filtro global)
@@ -1847,9 +1869,9 @@ function buildNovedades(data){
 // ════════════════════════════════════════════════
 
 // Estado de filtros de tiempos
-const TS={ciudad:'',tipo:'',canal:'',fechaInicio:'',fechaFin:'',origen:'',esp:new Set()};
+const TS={ciudad:'',tipo:'',canal:'',canalg:'',fechaInicio:'',fechaFin:'',origen:'',esp:new Set()};
 // Sort direction per horizontal bar chart: 'desc'=mayor→menor (default), 'asc'=menor→mayor
-const BSORT={vol:'desc',efec:'desc',tipoefe:'desc',espefe:'desc',canal:'desc'};
+const BSORT={vol:'desc',efec:'desc',tipoefe:'desc',espefe:'desc',canal:'desc',canalg:'desc'};
 // Sort direction for vertical tiempos bar charts
 const BSORTV={'alist-ciu':'desc','entr-ciu':'desc','ti-tipo':'desc'};
 
@@ -1895,6 +1917,7 @@ function getTiemposFiltered(base){
   if(TS.ciudad) d=d.filter(r=>getCiu(r)===TS.ciudad);
   if(TS.tipo)   d=d.filter(r=>getTipo(r)===TS.tipo);
   if(TS.canal)  d=d.filter(r=>getCanal(r)===TS.canal);
+  if(TS.canalg) d=d.filter(r=>getCanalG(r)===TS.canalg);
   if(TS.esp.size)d=d.filter(r=>TS.esp.has(getEsp(r)));
   if(TS.origen) d=d.filter(r=>r._o===TS.origen);
   if(TS.fechaInicio||TS.fechaFin){
@@ -2300,6 +2323,10 @@ function populateFilters(data){
   // Tipo Canal (en barra principal y en Tiempos)
   const canales=[...new Set(data.map(getCanal).filter(c=>c&&c!=='SIN CANAL'))].sort();
   const canalOpts=canales.map(c=>`<option value="${c}">${c}</option>`).join('');
+  const canalesG=[...new Set(data.map(getCanalG).filter(x=>x&&x!=='SIN CANAL'))].sort();
+  const canalgOpts=canalesG.map(x=>`<option value="${x}">${x}</option>`).join('');
+  const fcg=document.getElementById('f-canalg'); if(fcg){fcg.innerHTML='<option value="">Todos</option>'+canalgOpts; fcg.value=ST.canalg||'';}
+  const tfcg=document.getElementById('tf-canalg'); if(tfcg){tfcg.innerHTML='<option value="">Todos los canales (serv.)</option>'+canalgOpts; tfcg.value=TS.canalg||'';}
   const fc=document.getElementById('f-canal');
   if(fc){fc.innerHTML='<option value="">Todos los canales</option>'+canalOpts; fc.value=ST.canal||'';}
   const tfc=document.getElementById('tf-canal');
@@ -2344,10 +2371,13 @@ function loadPercapita(){
         PCP=(res.data||[]).map(raw=>{
           const o={};Object.keys(raw).forEach(k=>o[k.trim().toUpperCase()]=raw[k]);
           const tkKey=Object.keys(o).find(k=>k.includes('TICKET'))||'';
+          // servicios: columna "CANTIDAD <mes>" (CANTIDAD ENERO...), distinta de CANTIDAD MENSAJEROS
+          const servKey=Object.keys(o).find(k=>k.startsWith('CANTIDAD')&&!k.includes('MENSAJEROS'))||'';
           return {
             mes:(o['MES']||'').trim().toUpperCase(), modelo:(o['MODELO']||'').trim(),
             ciudad:(o['CIUDAD']||'').trim(), pdv:(o['PUNTO DE VENTA']||'').trim(),
-            mensajeros:parseNumCO(o['CANTIDAD MENSAJEROS']), servicios:parseNumCO(o['SERVICIOS']),
+            ceco:(o['CECO']||'').trim(), horario:(o['HORARIO']||'').trim(),
+            mensajeros:parseNumCO(o['CANTIDAD MENSAJEROS']), servicios:parseNumCO(o[servKey]),
             costo:parseNumCO(o[tkKey])
           };
         }).filter(x=>x.pdv&&PCP_MESES.includes(x.mes));
@@ -2375,94 +2405,115 @@ async function buildPercapita(){
   const selCiu=document.getElementById('pcp-ciudad'), selMod=document.getElementById('pcp-modelo');
   if(selCiu&&selCiu.options.length<=1){[...new Set(PCP.map(r=>r.ciudad).filter(Boolean))].sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;selCiu.appendChild(o);});}
   if(selMod&&selMod.options.length<=1){[...new Set(PCP.map(r=>r.modelo).filter(Boolean))].sort().forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;selMod.appendChild(o);});}
+  pcpRenderMeses();
   pcpRender();
+}
+
+let PCP_MESSEL=new Set(); // meses seleccionados (vacío = todos)
+function pcpMesesSel(){ const meses=pcpMesesPresentes(); return (PCP_MESSEL.size===0)?meses:meses.filter(m=>PCP_MESSEL.has(m)); }
+function pcpToggleMes(m){
+  const all=pcpMesesPresentes();
+  if(PCP_MESSEL.size===0){all.forEach(x=>PCP_MESSEL.add(x));}
+  if(PCP_MESSEL.has(m))PCP_MESSEL.delete(m); else PCP_MESSEL.add(m);
+  if(PCP_MESSEL.size===0||PCP_MESSEL.size===all.length)PCP_MESSEL.clear();
+  pcpRenderMeses(); pcpRender();
+}
+function pcpRenderMeses(){
+  const cont=document.getElementById('pcp-meses'); if(!cont)return;
+  cont.innerHTML='<span style="font-size:11px;color:#64748b;font-weight:600;margin-right:2px">Meses:</span>'+
+    pcpMesesPresentes().map(m=>{
+      const on=PCP_MESSEL.size===0||PCP_MESSEL.has(m);
+      return '<button onclick="pcpToggleMes(\''+m+'\')" style="font-size:11px;padding:4px 9px;border-radius:7px;cursor:pointer;border:1px solid '+(on?'#005596':'#d8e0ea')+';background:'+(on?'#005596':'#eef2f7')+';color:'+(on?'#fff':'#334155')+';font-weight:600;font-family:\'DM Sans\',sans-serif">'+m.slice(0,3)+'</button>';
+    }).join('');
 }
 
 function pcpRender(){
   const fCiu=(document.getElementById('pcp-ciudad')||{}).value||'';
   const fMod=(document.getElementById('pcp-modelo')||{}).value||'';
   const q=N((document.getElementById('pcp-srch')||{}).value||'');
-  const data=PCP.filter(r=>(!fCiu||r.ciudad===fCiu)&&(!fMod||r.modelo===fMod)&&(!q||N(r.pdv).includes(q)||N(r.ciudad).includes(q)));
+  const data=PCP.filter(r=>(!fCiu||r.ciudad===fCiu)&&(!fMod||r.modelo===fMod)&&(!q||N(r.pdv).includes(q)||N(r.ceco).includes(q)||N(r.ciudad).includes(q)));
   const meses=pcpMesesPresentes();
+  const selMeses=pcpMesesSel();
 
   const piv={};
   data.forEach(r=>{
-    if(!piv[r.pdv])piv[r.pdv]={pdv:r.pdv,ciudad:r.ciudad,modelo:r.modelo,costos:{},serv:{}};
-    piv[r.pdv].ciudad=r.ciudad; piv[r.pdv].modelo=r.modelo;
-    if(r.costo!==null)piv[r.pdv].costos[r.mes]=r.costo;
-    if(r.servicios!==null)piv[r.pdv].serv[r.mes]=r.servicios;
+    if(!piv[r.pdv])piv[r.pdv]={pdv:r.pdv,ceco:r.ceco,ciudad:r.ciudad,modelo:r.modelo,m:{}};
+    const pp=piv[r.pdv]; pp.ceco=r.ceco;pp.ciudad=r.ciudad;pp.modelo=r.modelo;
+    pp.m[r.mes]={mens:r.mensajeros,serv:r.servicios,hor:r.horario,costo:r.costo};
   });
   const rows=Object.values(piv);
-  // Promedio por punto de venta y variación (primer vs último mes con dato)
   rows.forEach(row=>{
-    const vals=meses.map(m=>row.costos[m]).filter(v=>v!=null&&!isNaN(v));
+    const vals=selMeses.map(m=>row.m[m]&&row.m[m].costo).filter(v=>v!=null&&!isNaN(v));
     row.prom=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
-    const pres=meses.filter(m=>row.costos[m]!=null&&!isNaN(row.costos[m]));
-    if(pres.length>=2){const f=row.costos[pres[0]],l=row.costos[pres[pres.length-1]];row.varp=(f&&f!==0)?(l-f)/f*100:null;}
-    else row.varp=null;
+    const pres=selMeses.filter(m=>row.m[m]&&row.m[m].costo!=null&&!isNaN(row.m[m].costo));
+    row.varp=(pres.length>=2)?((row.m[pres[0]].costo&&row.m[pres[0]].costo!==0)?(row.m[pres[pres.length-1]].costo-row.m[pres[0]].costo)/row.m[pres[0]].costo*100:null):null;
   });
-  document.getElementById('pcp-info').textContent=`${rows.length} puntos de venta · ${meses.length} meses`;
+  document.getElementById('pcp-info').textContent=rows.length+' puntos de venta · '+selMeses.length+' meses';
 
-  // Ordenamiento por columna
   const col=PCP_SORT.col,dir=PCP_SORT.dir;
   const keyVal=row=>{
     if(col==='pdv')return row.pdv.toLowerCase();
+    if(col==='ceco')return (row.ceco||'').toLowerCase();
     if(col==='ciudad')return (row.ciudad||'').toLowerCase();
     if(col==='modelo')return (row.modelo||'').toLowerCase();
     if(col==='prom')return row.prom;
     if(col==='var')return row.varp;
-    if(meses.includes(col))return row.costos[col];
+    if(meses.includes(col))return row.m[col]?row.m[col].costo:null;
     return null;
   };
-  rows.sort((a,b)=>{
-    let va=keyVal(a),vb=keyVal(b);
-    if(va==null&&vb==null)return 0;
-    if(va==null)return 1; if(vb==null)return -1;  // nulos siempre al final
-    const cmp=(typeof va==='string')?va.localeCompare(vb):(va-vb);
-    return dir==='desc'?-cmp:cmp;
-  });
+  rows.sort((a,b)=>{let va=keyVal(a),vb=keyVal(b);if(va==null&&vb==null)return 0;if(va==null)return 1;if(vb==null)return -1;const cmp=(typeof va==='string')?va.localeCompare(vb):(va-vb);return dir==='desc'?-cmp:cmp;});
 
   const arr=c=>PCP_SORT.col===c?(PCP_SORT.dir==='desc'?' ↓':' ↑'):'';
-  const thR=(c,lbl,right)=>`<th onclick="pcpSortBy('${c}')" style="cursor:pointer;user-select:none;position:sticky;top:0;background:#f1f5f9;z-index:2;${right?'text-align:right':''}">${lbl}${arr(c)}</th>`;
-  document.getElementById('pcp-thead').innerHTML='<tr>'+thR('pdv','Punto de Venta')+thR('ciudad','Ciudad')+thR('modelo','Modelo')+
-    meses.map(m=>thR(m,m.slice(0,3),true)).join('')+thR('prom','Promedio',true)+thR('var','Variación',true)+'</tr>';
+  const thS=(c,lbl,ex)=>'<th rowspan="2" onclick="pcpSortBy(\''+c+'\')" style="cursor:pointer;user-select:none;'+(ex||'')+'">'+lbl+arr(c)+'</th>';
+  let h1='<tr>'+thS('pdv','Punto de Venta')+thS('ceco','CECO')+thS('ciudad','Ciudad')+thS('modelo','Modelo');
+  selMeses.forEach(m=>{h1+='<th colspan="4" style="text-align:center;background:#e8f1f9">'+m.slice(0,3)+'</th>';});
+  h1+=thS('prom','Promedio','text-align:right')+thS('var','Variación','text-align:right')+'</tr>';
+  let h2='<tr>';
+  selMeses.forEach(m=>{h2+='<th style="text-align:right;font-size:10px;color:#64748b">Quick.</th><th style="text-align:right;font-size:10px;color:#64748b">Serv.</th><th style="text-align:center;font-size:10px;color:#64748b">Horario</th><th onclick="pcpSortBy(\''+m+'\')" style="cursor:pointer;text-align:right;font-size:10px">$ Percáp'+arr(m)+'</th>';});
+  h2+='</tr>';
+  document.getElementById('pcp-thead').innerHTML=h1+h2;
 
   const bodyRows=rows.map(row=>{
     let prev=null;
-    const cells=meses.map(m=>{
-      const v=row.costos[m];
-      if(v==null){prev=null;return '<td style="text-align:right;color:#cbd5e1">—</td>';}
-      let color='#334155',arrow='';
-      if(prev!=null){ if(v>prev*1.005){color='#ef4444';arrow=' ▲';} else if(v<prev*0.995){color='#10b981';arrow=' ▼';} }
-      prev=v;
-      return `<td style="text-align:right;color:${color};font-family:'DM Mono',monospace">${fmtCOP(v)}${arrow}</td>`;
+    const mcells=selMeses.map(m=>{
+      const d=row.m[m];
+      const mens=d&&d.mens!=null?d.mens:'—';
+      const serv=d&&d.serv!=null?d.serv.toLocaleString('es-CO'):'—';
+      const hor=d&&d.hor?d.hor:'—';
+      const v=d?d.costo:null;
+      let color='#334155',a='';
+      if(v==null){prev=null;}else{if(prev!=null){if(v>prev*1.005){color='#ef4444';a=' ▲';}else if(v<prev*0.995){color='#10b981';a=' ▼';}}prev=v;}
+      const cc=v==null?'<td style="text-align:right;color:#cbd5e1">—</td>':'<td style="text-align:right;color:'+color+';font-family:\'DM Mono\',monospace">'+fmtCOP(v)+a+'</td>';
+      return '<td style="text-align:right;color:#94a3b8;font-size:11px">'+mens+'</td><td style="text-align:right;color:#94a3b8;font-size:11px">'+serv+'</td><td style="text-align:center;color:#94a3b8;font-size:11px;white-space:nowrap">'+hor+'</td>'+cc;
     }).join('');
-    const promCell=`<td style="text-align:right;font-weight:700;font-family:'DM Mono',monospace;background:#f8fafc">${fmtCOP(row.prom)}</td>`;
+    const promCell='<td style="text-align:right;font-weight:700;font-family:\'DM Mono\',monospace;background:#f8fafc">'+fmtCOP(row.prom)+'</td>';
     const vr=row.varp;
-    const vrCell=vr==null?'<td style="text-align:right;color:#cbd5e1">—</td>':`<td style="text-align:right;font-weight:700;color:${vr>0.5?'#ef4444':vr<-0.5?'#10b981':'#64748b'}">${vr>0?'+':''}${vr.toFixed(1)}%</td>`;
-    return `<tr><td title="${row.pdv}">${row.pdv}</td><td>${row.ciudad}</td><td>${row.modelo}</td>${cells}${promCell}${vrCell}</tr>`;
+    const vrCell=vr==null?'<td style="text-align:right;color:#cbd5e1">—</td>':'<td style="text-align:right;font-weight:700;color:'+(vr>0.5?'#ef4444':vr<-0.5?'#10b981':'#64748b')+'">'+(vr>0?'+':'')+vr.toFixed(1)+'%</td>';
+    return '<tr><td title="'+row.pdv+'" style="white-space:nowrap">'+row.pdv+'</td><td>'+(row.ceco||'—')+'</td><td>'+row.ciudad+'</td><td>'+row.modelo+'</td>'+mcells+promCell+vrCell+'</tr>';
   }).join('');
 
-  // Fila inferior: promedio por mes (sobre los puntos filtrados)
-  const footAvg=meses.map(m=>{const vs=rows.map(r=>r.costos[m]).filter(v=>v!=null&&!isNaN(v));return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;});
-  const promGen=(()=>{const vs=rows.map(r=>r.prom).filter(v=>v!=null);return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;})();
   const st='position:sticky;bottom:0;background:#e8f1f9;font-weight:800;border-top:2px solid #94a3b8';
-  const footRow=`<tr><td style="${st}">PROMEDIO POR MES</td><td style="${st}"></td><td style="${st}"></td>`+
-    footAvg.map(v=>`<td style="${st};text-align:right;font-family:'DM Mono',monospace">${fmtCOP(v)}</td>`).join('')+
-    `<td style="${st};text-align:right;font-family:'DM Mono',monospace">${fmtCOP(promGen)}</td><td style="${st}"></td></tr>`;
+  let foot='<tr><td style="'+st+'">PROMEDIO POR MES</td><td style="'+st+'"></td><td style="'+st+'"></td><td style="'+st+'"></td>';
+  selMeses.forEach(m=>{
+    const costs=rows.map(r=>r.m[m]&&r.m[m].costo).filter(v=>v!=null&&!isNaN(v));
+    const servs=rows.map(r=>r.m[m]&&r.m[m].serv).filter(v=>v!=null&&!isNaN(v));
+    const avgC=costs.length?costs.reduce((a,b)=>a+b,0)/costs.length:null;
+    const sumS=servs.reduce((a,b)=>a+b,0);
+    foot+='<td style="'+st+'"></td><td style="'+st+';text-align:right;font-family:\'DM Mono\',monospace">'+sumS.toLocaleString('es-CO')+'</td><td style="'+st+'"></td><td style="'+st+';text-align:right;font-family:\'DM Mono\',monospace">'+fmtCOP(avgC)+'</td>';
+  });
+  const promGen=(()=>{const vs=rows.map(r=>r.prom).filter(v=>v!=null);return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;})();
+  foot+='<td style="'+st+';text-align:right;font-family:\'DM Mono\',monospace">'+fmtCOP(promGen)+'</td><td style="'+st+'"></td></tr>';
 
-  document.getElementById('pcp-tbody').innerHTML=(bodyRows||`<tr><td colspan="${meses.length+5}" style="padding:20px;color:#94a3b8">Sin datos para el filtro</td></tr>`)+(rows.length?footRow:'');
+  const colspan=selMeses.length*4+6;
+  document.getElementById('pcp-tbody').innerHTML=(bodyRows||'<tr><td colspan="'+colspan+'" style="padding:20px;color:#94a3b8">Sin datos para el filtro</td></tr>')+(rows.length?foot:'');
 
-  const avgMes=meses.map(m=>{const vs=data.filter(r=>r.mes===m&&r.costo!=null).map(r=>r.costo);return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:0;});
-  const servMes=meses.map(m=>{const vs=data.filter(r=>r.mes===m&&r.servicios!=null).map(r=>r.servicios);return vs.reduce((a,b)=>a+b,0);});
+  const labels=selMeses.map(m=>m.slice(0,3));
+  const avgMes=selMeses.map(m=>{const vs=rows.map(r=>r.m[m]&&r.m[m].costo).filter(v=>v!=null&&!isNaN(v));return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:0;});
+  const servMes=selMeses.map(m=>{const vs=rows.map(r=>r.m[m]&&r.m[m].serv).filter(v=>v!=null&&!isNaN(v));return vs.reduce((a,b)=>a+b,0);});
   dc('ch-pcp-tend');const c1=document.getElementById('ch-pcp-tend');
-  if(c1)CHS['ch-pcp-tend']=new Chart(c1.getContext('2d'),{type:'line',
-    data:{labels:meses.map(m=>m.slice(0,3)),datasets:[{label:'Percápita promedio',data:avgMes.map(v=>Math.round(v)),borderColor:'#005596',backgroundColor:'rgba(0,85,150,.08)',fill:true,tension:.3,pointRadius:4,pointBackgroundColor:'#005596'}]},
-    options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtCOP(c.raw)}}},scales:{y:{ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k',font:{family:'DM Mono',size:10}},grid:{color:'#f1f5f9'}},x:{grid:{display:false}}}}});
+  if(c1)CHS['ch-pcp-tend']=new Chart(c1.getContext('2d'),{type:'line',data:{labels:labels,datasets:[{label:'Percápita promedio',data:avgMes.map(v=>Math.round(v)),borderColor:'#005596',backgroundColor:'rgba(0,85,150,.08)',fill:true,tension:.3,pointRadius:4,pointBackgroundColor:'#005596'}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtCOP(c.raw)}}},scales:{y:{ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k',font:{family:'DM Mono',size:10}},grid:{color:'#f1f5f9'}},x:{grid:{display:false}}}}});
   dc('ch-pcp-serv');const c2=document.getElementById('ch-pcp-serv');
-  if(c2)CHS['ch-pcp-serv']=new Chart(c2.getContext('2d'),{type:'bar',
-    data:{labels:meses.map(m=>m.slice(0,3)),datasets:[{label:'Servicios',data:servMes,backgroundColor:'#7c3aed',borderRadius:5}]},
-    options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.toLocaleString('es-CO')+' servicios'}}},scales:{y:{ticks:{font:{family:'DM Mono',size:10}},grid:{color:'#f1f5f9'}},x:{grid:{display:false}}}}});
+  if(c2)CHS['ch-pcp-serv']=new Chart(c2.getContext('2d'),{type:'bar',data:{labels:labels,datasets:[{label:'Servicios',data:servMes,backgroundColor:'#7c3aed',borderRadius:5}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.toLocaleString('es-CO')+' servicios'}}},scales:{y:{ticks:{font:{family:'DM Mono',size:10}},grid:{color:'#f1f5f9'}},x:{grid:{display:false}}}}});
 }
 ['pcp-ciudad','pcp-modelo'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('change',pcpRender);});
 {const e=document.getElementById('pcp-srch');if(e)e.addEventListener('input',pcpRender);}
@@ -2488,7 +2539,7 @@ async function renderTab(tab,data,seq,basePct=20){
   if(tab==='general'){
     if(!await runStep(seq,'General: tendencia y mix',basePct,()=>{buildTrend(data);buildMix(data);} ))return;
     if(!await runStep(seq,'General: ciudades',basePct+12,()=>{buildCiuVol(data);buildCiuEfe(data);} ))return;
-    if(!await runStep(seq,'General: tipo de servicio',basePct+24,()=>{buildTipoVol(data);buildTipoEfe(data);buildCanalVol(data);buildTipoTable(data);} ))return;
+    if(!await runStep(seq,'General: tipo de servicio',basePct+24,()=>{buildTipoVol(data);buildTipoEfe(data);buildCanalGVol(data);buildCanalVol(data);buildTipoTable(data);} ))return;
   }else if(tab==='novedades'){
     await runStep(seq,'Novedades: gráficos y tablas',basePct,()=>buildNovedades(data));
   }else if(tab==='tiempos'){
@@ -2497,8 +2548,6 @@ async function renderTab(tab,data,seq,basePct=20){
     await runStep(seq,'Detalle: tabla paginada',basePct,()=>buildDetail(data));
   }else if(tab==='mapa'){
     await runStep(seq,'Mapa: ubicaciones y calor',basePct,()=>{buildMap(data);setTimeout(()=>MI&&MI.invalidateSize(),250);});
-  }else if(tab==='percapita'){
-    await runStep(seq,'Percápitas: costos por punto',basePct,()=>buildPercapita());
   }
 }
 
@@ -2753,6 +2802,9 @@ document.querySelectorAll('.tab').forEach(t=>{
     document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
     document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
     t.classList.add('on');document.getElementById('page-'+t.dataset.tab).classList.add('on');
+    // La barra de filtros global no aplica a Percápitas (datos de Google Sheet)
+    {const fb=document.getElementById('fbar'); if(fb)fb.style.display=(t.dataset.tab==='percapita')?'none':'';}
+    if(t.dataset.tab==='percapita'){buildPercapita();}
     if(LAST_DATA.length){
       const seq=++UPD_SEQ;
       startWatchdog();
@@ -2778,6 +2830,7 @@ document.getElementById('f-ciudad').addEventListener('change',e=>{ST.ciudad=e.ta
 document.getElementById('f-tipo').addEventListener('change',e=>{ST.tipo=e.target.value;update();});
 document.getElementById('f-nov').addEventListener('change',e=>{ST.nov=e.target.value;update();});
 document.getElementById('f-canal').addEventListener('change',e=>{ST.canal=e.target.value;update();});
+document.getElementById('f-canalg').addEventListener('change',e=>{ST.canalg=e.target.value;update();});
 
 // ════════════════════════════════════════════════
 // MSEL — Multi-select with search engine
@@ -2865,12 +2918,12 @@ function mselUpdateTrigger(id){
   const m=MSEL[id];if(!m)return;
   const trigger=document.getElementById('msel-trigger-'+id);if(!trigger)return;
   const n=m.selected.size;
-  if(n===0){trigger.innerHTML='Todos los convenios';}
+  if(n===0){trigger.innerHTML='Todos los puntos';}
   else if(n===1){
     const lbl=[...m.selected][0].replace(/^-|-$/g,'').trim().slice(0,22);
     trigger.innerHTML=`${lbl}<span class="msel-badge">1</span>`;
   } else {
-    trigger.innerHTML=`${n} convenios<span class="msel-badge">${n}</span>`;
+    trigger.innerHTML=`${n} puntos<span class="msel-badge">${n}</span>`;
   }
   // Re-add the ::after arrow via a span (since innerHTML replaces it)
 }
@@ -2928,8 +2981,8 @@ function setDatePreset(p){
 });
 document.getElementById('srch').addEventListener('input',e=>{ST.srch=e.target.value;buildDetail(getFiltered());});
 document.getElementById('btn-reset').addEventListener('click',()=>{
-  ST={nc:true,cross:true,ciudad:'',tipo:'',nov:'',canal:'',esp:new Set(),fechaInicio:'',fechaFin:'',srch:''};
-  ['f-ciudad','f-tipo','f-nov','f-canal','f-fecha-inicio','f-fecha-fin','srch'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ST={nc:true,cross:true,ciudad:'',tipo:'',nov:'',canal:'',canalg:'',esp:new Set(),fechaInicio:'',fechaFin:'',srch:''};
+  ['f-ciudad','f-tipo','f-nov','f-canal','f-canalg','f-fecha-inicio','f-fecha-fin','srch'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.querySelectorAll('.date-preset').forEach(b=>b.classList.toggle('on',b.dataset.p==='todos'));
   mselClearAll('esp');
   document.querySelectorAll('.pill[data-o]').forEach(p=>p.classList.add('on'));
@@ -2937,13 +2990,14 @@ document.getElementById('btn-reset').addEventListener('click',()=>{
 });
 
 // FILTROS TIEMPOS
-['tf-ciudad','tf-tipo','tf-canal','tf-fecha-inicio','tf-fecha-fin','tf-origen'].forEach(id=>{
+['tf-ciudad','tf-tipo','tf-canal','tf-canalg','tf-fecha-inicio','tf-fecha-fin','tf-origen'].forEach(id=>{
   const el=document.getElementById(id);
   if(!el)return;
   el.addEventListener('change',()=>{
     TS.ciudad=document.getElementById('tf-ciudad').value;
     TS.tipo=document.getElementById('tf-tipo').value;
     TS.canal=document.getElementById('tf-canal').value;
+    TS.canalg=document.getElementById('tf-canalg').value;
     TS.fechaInicio=document.getElementById('tf-fecha-inicio').value;
     TS.fechaFin=document.getElementById('tf-fecha-fin').value;
     TS.origen=document.getElementById('tf-origen').value;
@@ -2951,8 +3005,8 @@ document.getElementById('btn-reset').addEventListener('click',()=>{
   });
 });
 document.getElementById('tf-reset')&&document.getElementById('tf-reset').addEventListener('click',()=>{
-  TS.ciudad='';TS.tipo='';TS.canal='';TS.fechaInicio='';TS.fechaFin='';TS.origen='';TS.esp=new Set();
-  ['tf-ciudad','tf-tipo','tf-canal','tf-fecha-inicio','tf-fecha-fin','tf-origen'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  TS.ciudad='';TS.tipo='';TS.canal='';TS.canalg='';TS.fechaInicio='';TS.fechaFin='';TS.origen='';TS.esp=new Set();
+  ['tf-ciudad','tf-tipo','tf-canal','tf-canalg','tf-fecha-inicio','tf-fecha-fin','tf-origen'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   mselClearAll('tfesp');
   buildTiempos(getFiltered());
 });
